@@ -3,21 +3,18 @@ package com.example.wifiindoorpositioning;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
-import android.hardware.SensorManager;
 import android.os.Bundle;
-import android.view.MotionEvent;
-import android.view.View;
-import android.widget.Button;
+import android.widget.Adapter;
+import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
-
-import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
     private SystemServiceManager systemServiceManager;
 
     private ImageView imgCompass;
     private TextView txtOrientation, txtStatus;
+    private ZoomableImageView mapImage;
     private HighlightButton btScan;
 
     @SuppressLint({"ClickableViewAccessibility", "SetTextI18n", "DefaultLocale"})
@@ -29,15 +26,24 @@ public class MainActivity extends AppCompatActivity {
         imgCompass = findViewById(R.id.imgCompass);
         txtOrientation = findViewById(R.id.orientation);
         txtStatus = findViewById(R.id.txtStatus);
+        mapImage = findViewById(R.id.zoomableView);
         btScan = findViewById(R.id.btScan);
+
+        ApDataManager.createInstance(this);
+
+        //ArrayAdapter<CharSequence> adapter = new ArrayAdapter<CharSequence>(this, android.R.layout.simple_spinner_item, countries);
+
+        mapImage.setSamplePoints(ApDataManager.getInstance().fingerprint);
 
         systemServiceManager = new SystemServiceManager(this);
 
         btScan.setOnButtonDownListener(() -> {
+            txtStatus.setText("掃描中...");
             systemServiceManager.scan((code, results) -> {
                 switch (code) {
                     case SystemServiceManager.CODE_SUCCESS:
                         txtStatus.setText("成功");
+                        mapImage.setHighlights(ApDataManager.getInstance().getDistances(results), 4);
                         break;
                     case SystemServiceManager.CODE_NO_LOCATION:
                         txtStatus.setText("未開啟位置");
@@ -48,17 +54,21 @@ public class MainActivity extends AppCompatActivity {
                     case SystemServiceManager.CODE_TOO_FREQUENT:
                         txtStatus.setText("過於頻繁");
                         break;
+                    default:
+                        txtStatus.setText("未知錯誤");
+                        break;
                 }
             });
-            txtStatus.setText("掃描中...");
         });
 
         systemServiceManager.setOnOrientationChangedListener(degree -> {
             imgCompass.setRotation(degree);
             txtOrientation.setText(String.format("%.2f (%s)", degree, getDirection(degree)));
+            mapImage.setLookAngle(degree);
         });
     }
 
+    //region Sensor相關
     public String getDirection(float degree){
         float range = Math.abs(degree);
         if (range < 22.5){
@@ -93,4 +103,5 @@ public class MainActivity extends AppCompatActivity {
 
         systemServiceManager.unregisterSensor();
     }
+    //endregion
 }

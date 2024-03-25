@@ -25,7 +25,7 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:layout_weight="1.2"
-            android:text="orientation" android:textSize="16sp" android:textColor="@color/black" />
+            android:text="方位" android:textSize="16sp" android:textColor="@color/black" />
 
         <com.example.wifiindoorpositioning.HighlightButton
             android:id="@+id/btScan"
@@ -36,14 +36,44 @@
             app:backgroundTint="@null"
             android:text="開始掃描" android:textSize="16sp" android:textColor="@color/black" />
 
+        <TextView
+            android:id="@+id/txtStatus"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1.2"
+            android:gravity="center"
+            android:text="掃描結果" android:textSize="16sp" android:textColor="@color/black" />
+
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/txtStatus"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center"
-        android:text="orientation" android:textSize="16sp" android:textColor="@color/black" />
+        android:orientation="horizontal" >
 
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_weight="1"
+            android:text="暫留" android:textSize="16sp" android:textColor="@color/black" />
+
+        <Spinner
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_weight="1"
+            android:entries="@array/displayMode"
+            android:textSize="30sp" />
+
+    </LinearLayout>
+
+    <com.example.wifiindoorpositioning.ZoomableImageView
+        android:id="@+id/zoomableView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="0dp"
+        android:adjustViewBounds="true"
+        android:src="@drawable/e1_1f" />
 
 </LinearLayout>

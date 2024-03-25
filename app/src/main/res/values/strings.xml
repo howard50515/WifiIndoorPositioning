@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">工二室內定位</string>
+    <string-array name="displayMode">
+        <item>無</item>
+        <item>距離</item>
+        <item>訊號強度</item>
+    </string-array>
 </resources>

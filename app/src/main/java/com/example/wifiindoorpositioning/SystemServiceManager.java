@@ -79,7 +79,6 @@ public class SystemServiceManager implements SensorEventListener {
         context.registerReceiver(receiver, intentFilter);
         if (ActivityCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED){
             callback.complete(CODE_NO_PERMISSION, null);
-
             return;
         }
 
@@ -96,12 +95,10 @@ public class SystemServiceManager implements SensorEventListener {
     private void receiveScan(boolean success) {
         if (ActivityCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED){
             completeCallback.complete(CODE_NO_PERMISSION, null);
-
             return;
         }
         if (!success) {
             completeCallback.complete(CODE_TOO_FREQUENT, null);
-
             return;
         }
         ArrayList<WifiResult> wifiResults = new ArrayList<>();
@@ -112,86 +109,6 @@ public class SystemServiceManager implements SensorEventListener {
         }
 
         completeCallback.complete(CODE_SUCCESS, wifiResults);
-
-//        for (int i = results.size(); i < wifiInfoViews.size(); i++) {
-//            wifiInfoViews.get(i).setVisibility(GONE);
-//        }
-
-//        for (int i = 0; i < results.size(); i++) {
-//            if (wifiInfoViews.size() <= i) {
-//                WifiInfoView wifiInfoView = new WifiInfoView(MainActivity.this);
-//                wifiInfoView.setWifiInfo(results.get(i), null);
-//                wifiInfoViews.add(wifiInfoView);
-//                body.addView(wifiInfoView);
-//            } else {
-//                wifiInfoViews.get(i).setWifiInfo(results.get(i), null);
-//                wifiInfoViews.get(i).setVisibility(VISIBLE);
-//            }
-//        }
-
-//        ArrayList<Float> ssids = new ArrayList<>(accessPoints.size());
-//        for (int i = 0; i < accessPoints.size(); i++){
-//            float level = -100f;
-//
-//            for (WifiResult result : wifiResults){
-//                if (accessPoints.get(i).equals(result.apId)){
-//                    level = result.level;
-//                    break;
-//                }
-//            }
-//
-//            ssids.add(level);
-//        }
-//
-//        distances = new ArrayList<>();
-//        for (SamplePoint sp : fingerprint){
-//            float sum = 0;
-//            int num = 0;
-//            int notFoundNum = 0;
-//
-//            for (int j = 0; j < sp.vector.size(); j++){
-//                if (sp.vector.get(j) != -100){
-//                    num++;
-//
-//                    if (ssids.get(j) == -100){
-//                        notFoundNum++;
-//                    }
-//                }
-//
-//                float diff = sp.vector.get(j) - ssids.get(j);
-//
-//                sum += diff * diff;
-//            }
-//
-//            distances.add(new DistanceInfo(sp.samplePoint, (float)Math.sqrt(sum), sp.coordinateX, sp.coordinateY, num, notFoundNum));
-//        }
-//
-//        distances.sort((a, b) -> {
-//            if (Math.abs(a.distance - b.distance) < 0.001f) return 0;
-//
-//            return a.distance > b.distance ? 1 : -1;
-//        });
-//
-//        for (WifiInfoView view : wifiInfoViews){
-//            view.setVisibility(GONE);
-//        }
-//
-//        for (int i = 0; i < distances.size(); i++) {
-//            if (wifiInfoViews.size() <= i) {
-//                WifiInfoView wifiInfoView = new WifiInfoView(MainActivity.this);
-//                wifiInfoView.setDistanceInfo(distances.get(i));
-//                wifiInfoViews.add(wifiInfoView);
-//                body.addView(wifiInfoView);
-//            } else {
-//                wifiInfoViews.get(i).setDistanceInfo(distances.get(i));
-//                wifiInfoViews.get(i).setVisibility(VISIBLE);
-//            }
-//        }
-//
-//        zoomableView.setHighlights(distances, 4);
-//
-//        txtRTTSupport.setText(rttSupport ? "true" : "false");
-//        txtRTTAvailable.setText(rttAvailable ? "true" : "false");
     }
 
     public void registerSensor(){
