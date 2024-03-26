@@ -119,7 +119,7 @@ public class ApDataManager {
 
             if (r == null)
                 r = new WifiResult(apName, -100);
-
+//test
             output.add(r);
         }
 
