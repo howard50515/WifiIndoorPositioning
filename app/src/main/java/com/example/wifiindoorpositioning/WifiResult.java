@@ -15,4 +15,11 @@ public class WifiResult {
         level = result.level;
         apId = SSID + ":" + BSSID;
     }
+
+    public WifiResult(String apId, int level){
+        this.BSSID = "";
+        this.SSID = "";
+        this.level = level;
+        this.apId = apId;
+    }
 }

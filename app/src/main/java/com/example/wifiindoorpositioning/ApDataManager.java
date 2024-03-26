@@ -29,6 +29,8 @@ public class ApDataManager {
 
     public ArrayList<String> accessPoints;
     public ArrayList<SamplePoint> fingerprint;
+    public ArrayList<WifiResult> results;
+    public ArrayList<DistanceInfo> distances;
 
     private ApDataManager(Context context) {
 
@@ -102,7 +104,31 @@ public class ApDataManager {
         return ssids;
     }
 
+    public ArrayList<WifiResult> getSelectedApResults(ArrayList<WifiResult> results){
+        ArrayList<WifiResult> output = new ArrayList<>();
+
+        for (String apName : accessPoints){
+            WifiResult r = null;
+
+            for (WifiResult result : results){
+                if (result.apId.equals(apName)){
+                    r = result;
+                    break;
+                }
+            }
+
+            if (r == null)
+                r = new WifiResult(apName, -100);
+
+            output.add(r);
+        }
+
+        return output;
+    }
+
     public ArrayList<DistanceInfo> getDistances(ArrayList<WifiResult> results){
+        this.results = getSelectedApResults(results);
+
         ArrayList<Float> ssids = getVector(results);
 
         ArrayList<DistanceInfo> distances = new ArrayList<>();
@@ -127,6 +153,14 @@ public class ApDataManager {
 
             distances.add(new DistanceInfo(sp.samplePoint, (float)Math.sqrt(sum), sp.coordinateX, sp.coordinateY, num, notFoundNum));
         }
+
+        this.distances = distances;
+
+        return distances;
+    }
+
+    public static ArrayList<DistanceInfo> sortByDistance(ArrayList<DistanceInfo> distances){
+        distances.sort(DistanceInfo.distanceComparable);
 
         return distances;
     }

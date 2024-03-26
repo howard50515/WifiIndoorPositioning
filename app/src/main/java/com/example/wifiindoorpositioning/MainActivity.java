@@ -4,9 +4,10 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
 import android.os.Bundle;
-import android.widget.Adapter;
-import android.widget.ArrayAdapter;
+import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ImageView;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity {
@@ -15,6 +16,8 @@ public class MainActivity extends AppCompatActivity {
     private ImageView imgCompass;
     private TextView txtOrientation, txtStatus;
     private ZoomableImageView mapImage;
+    private Spinner displayModeSpinner;
+    private ContentDebugView contentView;
     private HighlightButton btScan;
 
     @SuppressLint({"ClickableViewAccessibility", "SetTextI18n", "DefaultLocale"})
@@ -28,10 +31,10 @@ public class MainActivity extends AppCompatActivity {
         txtStatus = findViewById(R.id.txtStatus);
         mapImage = findViewById(R.id.zoomableView);
         btScan = findViewById(R.id.btScan);
+        displayModeSpinner = findViewById(R.id.displayModeSpinner);
+        contentView = findViewById(R.id.contentView);
 
         ApDataManager.createInstance(this);
-
-        //ArrayAdapter<CharSequence> adapter = new ArrayAdapter<CharSequence>(this, android.R.layout.simple_spinner_item, countries);
 
         mapImage.setSamplePoints(ApDataManager.getInstance().fingerprint);
 
@@ -43,7 +46,8 @@ public class MainActivity extends AppCompatActivity {
                 switch (code) {
                     case SystemServiceManager.CODE_SUCCESS:
                         txtStatus.setText("成功");
-                        mapImage.setHighlights(ApDataManager.getInstance().getDistances(results), 4);
+                        mapImage.setHighlights(ApDataManager.sortByDistance(ApDataManager.getInstance().getDistances(results)), 4);
+                        contentView.refresh();
                         break;
                     case SystemServiceManager.CODE_NO_LOCATION:
                         txtStatus.setText("未開啟位置");
@@ -65,6 +69,20 @@ public class MainActivity extends AppCompatActivity {
             imgCompass.setRotation(degree);
             txtOrientation.setText(String.format("%.2f (%s)", degree, getDirection(degree)));
             mapImage.setLookAngle(degree);
+        });
+
+        displayModeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                String mode = displayModeSpinner.getSelectedItem().toString();
+
+                contentView.setMode(mode);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {
+
+            }
         });
     }
 

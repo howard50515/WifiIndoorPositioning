@@ -1,5 +1,7 @@
 package com.example.wifiindoorpositioning;
 
+import java.util.Comparator;
+
 public class DistanceInfo {
     public String samplePoint;
     public float distance;
@@ -18,4 +20,10 @@ public class DistanceInfo {
         this.pastFoundNum = pastFoundNum;
         this.notFoundNum = notFoundNum;
     }
+
+    public static Comparator<DistanceInfo> distanceComparable = (distanceInfo, t1) -> {
+        if (Math.abs(distanceInfo.distance - t1.distance) < 0.001f) return 0;
+
+        return distanceInfo.distance > t1.distance ? 1 : -1;
+    };
 }
