@@ -3,9 +3,16 @@ package com.example.wifiindoorpositioning;
 import java.util.Comparator;
 
 public class DistanceInfo {
+    // 參考點名字
     public String samplePoint;
+
+    // 參考點與目前點距離
     public float distance;
+
+    // 參考點的 x y 座標
     public float coordinateX, coordinateY;
+
+    // 參考點 loss rate = notFoundName / pastFoundNum
     public int pastFoundNum, notFoundNum;
 
     public DistanceInfo(String samplePoint, float distance, float coordinateX, float coordinateY){

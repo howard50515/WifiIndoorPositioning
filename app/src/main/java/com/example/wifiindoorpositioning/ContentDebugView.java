@@ -61,7 +61,7 @@ public class ContentDebugView extends ScrollView {
     public void displayDistanceInfo(){
         hideAllInfo();
 
-        ArrayList<DistanceInfo> distances = ApDataManager.getInstance().distances;
+        ArrayList<DistanceInfo> distances = ApDataManager.getInstance().displayDistances;
 
         if (distances == null) return;
 

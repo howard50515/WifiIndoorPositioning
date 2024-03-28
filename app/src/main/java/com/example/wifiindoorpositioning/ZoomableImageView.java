@@ -84,6 +84,9 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
 
         postInvalidate();
     }
+    public void setImagePoint(ApDataManager.Coordinate c){
+        setImagePoint(c.x, c.y);
+    }
     public void setLookAngle(float angle){
         lookAngle = angle;
 
@@ -107,8 +110,8 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
         postInvalidate();
     }
 
-    public void setHighlights(ArrayList<DistanceInfo> distances, int num){
-        highlights = distances.subList(0, num);
+    public void setHighlights(ArrayList<DistanceInfo> distances){
+        highlights = distances;
 
         postInvalidate();
     }

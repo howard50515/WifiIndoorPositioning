@@ -10,6 +10,8 @@ import android.widget.ImageView;
 import android.widget.Spinner;
 import android.widget.TextView;
 
+import java.util.ArrayList;
+
 public class MainActivity extends AppCompatActivity {
     private SystemServiceManager systemServiceManager;
 
@@ -36,6 +38,38 @@ public class MainActivity extends AppCompatActivity {
 
         ApDataManager.createInstance(this);
 
+        ApDataManager.getInstance().setHighlightAndDisplayFunction(new ApDataManager.HighlightAndDisplay() {
+            @Override
+            public ArrayList<DistanceInfo> highlight(ArrayList<DistanceInfo> distances, int k) {
+                // distances 每個參考點到目前位置的預測資訊
+                // k 也可以先不管就先挑你覺得效果好的
+                // for (int i = 0; i < distances.size(); i++){
+                    // 拿到單一參考點資訊
+                    // 可以到 DistanceInfo 看一下有什麼變數
+                    // DistanceInfo distance = distances.get(i);
+                    /* 計算距離倒數的總和、各個參考點的距離的權重等 */
+                // }
+
+                ArrayList<DistanceInfo> highlight = new ArrayList<>();
+
+                // 回傳想要highlight的點
+                // return highlight;
+
+                // 目前為預設的距離最近的k個
+                return ApDataManager.getInstance().defaultHighlightAndDisplay.highlight(distances, k);
+            }
+
+            @Override
+            public ArrayList<DistanceInfo> display(ArrayList<DistanceInfo> distances) {
+                // distances 每個參考點到目前位置的預測資訊
+
+                // 放到這裏的話可以顯示在底下的下滑欄位
+                // 也可以先不動 看你想不想看debug結果
+                // 回傳越接近的點放在 ArrayList 的越前面
+                return ApDataManager.getInstance().defaultHighlightAndDisplay.display(distances);
+            }
+        });
+
         mapImage.setSamplePoints(ApDataManager.getInstance().fingerprint);
 
         systemServiceManager = new SystemServiceManager(this);
@@ -46,8 +80,7 @@ public class MainActivity extends AppCompatActivity {
                 switch (code) {
                     case SystemServiceManager.CODE_SUCCESS:
                         txtStatus.setText("成功");
-                        mapImage.setHighlights(ApDataManager.sortByDistance(ApDataManager.getInstance().getDistances(results)), 4);
-                        contentView.refresh();
+                        ApDataManager.getInstance().setResult(results);
                         break;
                     case SystemServiceManager.CODE_NO_LOCATION:
                         txtStatus.setText("未開啟位置");
@@ -63,6 +96,15 @@ public class MainActivity extends AppCompatActivity {
                         break;
                 }
             });
+        });
+
+        ApDataManager.getInstance().registerOnResultChangedListener(new ApDataManager.OnResultChangedListener() {
+            @Override
+            public void resultChanged() {
+                mapImage.setImagePoint(ApDataManager.getInstance().getPredictCoordinate());
+                mapImage.setHighlights(ApDataManager.getInstance().highlightDistances);
+                contentView.refresh();
+            }
         });
 
         systemServiceManager.setOnOrientationChangedListener(degree -> {
