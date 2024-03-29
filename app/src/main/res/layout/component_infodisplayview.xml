@@ -15,7 +15,7 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="5dp"
         android:gravity="center"
-        android:text="test" android:textSize="16sp" />
+        android:text="test" android:textSize="16sp" android:textColor="@color/red" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -44,5 +44,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
+        android:background="@drawable/background_stroke_bottom"
         android:text="hello" android:textSize="16sp" />
 </merge>

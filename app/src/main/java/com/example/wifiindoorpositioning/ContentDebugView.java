@@ -1,6 +1,7 @@
 package com.example.wifiindoorpositioning;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.util.AttributeSet;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -58,21 +59,36 @@ public class ContentDebugView extends ScrollView {
         }
     }
 
+    private static final int highlightColor = Color.valueOf(0, 1, 0, 0.6f).toArgb();
+
     public void displayDistanceInfo(){
         hideAllInfo();
 
         ArrayList<DistanceInfo> distances = ApDataManager.getInstance().displayDistances;
+        ArrayList<DistanceInfo> highlights = ApDataManager.getInstance().highlightDistances;
 
         if (distances == null) return;
 
         for (int i = 0; i < distances.size(); i++){
+            DistanceInfo distance = distances.get(i);
+
+            boolean isHighlight = false;
+            for (DistanceInfo highlight : highlights){
+                if (distance.samplePoint.equals(highlight.samplePoint)){
+                    isHighlight = true;
+                    break;
+                }
+            }
+
             if (displayViews.size() <= i) {
                 InfoDisplayView displayView = new InfoDisplayView(context);
                 displayView.setInfo(distances.get(i));
                 displayViews.add(displayView);
+                displayView.setBackgroundColor(isHighlight ? highlightColor : Color.WHITE);
                 body.addView(displayView);
             } else {
                 displayViews.get(i).setInfo(distances.get(i));
+                displayViews.get(i).setBackgroundColor(isHighlight ? highlightColor : Color.WHITE);
                 displayViews.get(i).setVisibility(VISIBLE);
             }
         }

@@ -47,7 +47,7 @@ public class MainActivity extends AppCompatActivity {
                     // 拿到單一參考點資訊
                     // 可以到 DistanceInfo 看一下有什麼變數
                     // DistanceInfo distance = distances.get(i);
-                    /* 計算距離倒數的總和、各個參考點的距離的權重等 */
+                    /* 透過距離、loss rate 等，決定最後highlight的參考點 */
                 // }
 
                 ArrayList<DistanceInfo> highlight = new ArrayList<>();
@@ -66,6 +66,7 @@ public class MainActivity extends AppCompatActivity {
                 // 放到這裏的話可以顯示在底下的下滑欄位
                 // 也可以先不動 看你想不想看debug結果
                 // 回傳越接近的點放在 ArrayList 的越前面
+                // 目前為預設根據距離排序
                 return ApDataManager.getInstance().defaultHighlightAndDisplay.display(distances);
             }
         });
@@ -101,7 +102,9 @@ public class MainActivity extends AppCompatActivity {
         ApDataManager.getInstance().registerOnResultChangedListener(new ApDataManager.OnResultChangedListener() {
             @Override
             public void resultChanged() {
-                mapImage.setImagePoint(ApDataManager.getInstance().getPredictCoordinate());
+                ApDataManager.Coordinate c = ApDataManager.getInstance().getPredictCoordinate();
+                mapImage.setImagePoint(c.x * mapImage.coordinateDensityScalar,
+                        c.y * mapImage.coordinateDensityScalar);
                 mapImage.setHighlights(ApDataManager.getInstance().highlightDistances);
                 contentView.refresh();
             }

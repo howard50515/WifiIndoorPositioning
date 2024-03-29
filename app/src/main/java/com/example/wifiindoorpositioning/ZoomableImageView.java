@@ -138,7 +138,8 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
         highlightPaint.setStyle(Paint.Style.FILL);
     }
 
-    public float density, width, height;
+    public float density, width, height, coordinateDensityScalar;
+    public static final float defaultDensity = 2.65f;
 
     @SuppressLint("ClickableViewAccessibility")
     private void zoomImageSettings(){
@@ -153,6 +154,7 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
             Bitmap bitmap = drawable.getBitmap();
 
             density = displayMetrics.density;
+            coordinateDensityScalar = density / defaultDensity;
             width = bitmap.getWidth();
             height = bitmap.getHeight();
 
@@ -173,7 +175,7 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
                 switch (event.getAction() & MotionEvent.ACTION_MASK) {
                     case MotionEvent.ACTION_DOWN:
                         mode = Mode.Drag;
-                        setScreenPoint(event.getX(), event.getY());
+                        // setScreenPoint(event.getX(), event.getY());
                         lastPointX = event.getX();
                         lastPointY = event.getY();
                         if (scrollView != null)
