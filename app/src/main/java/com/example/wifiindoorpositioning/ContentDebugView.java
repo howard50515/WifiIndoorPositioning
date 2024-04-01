@@ -18,6 +18,7 @@ public class ContentDebugView extends ScrollView {
     public ContentDebugView(Context context) {
         super(context);
         this.context = context;
+        initView();
     }
 
     public ContentDebugView(Context context, AttributeSet attrs) {
@@ -31,6 +32,8 @@ public class ContentDebugView extends ScrollView {
     private void initView() {
         inflate(context, R.layout.window_contentdisplayview, this);
         body = findViewById(R.id.body);
+
+        ApDataManager.getInstance().registerOnResultChangedListener(this::refresh);
     }
 
     public void setMode(String mode){
@@ -74,7 +77,7 @@ public class ContentDebugView extends ScrollView {
 
             boolean isHighlight = false;
             for (DistanceInfo highlight : highlights){
-                if (distance.samplePoint.equals(highlight.samplePoint)){
+                if (distance.rpName.equals(highlight.rpName)){
                     isHighlight = true;
                     break;
                 }
@@ -83,8 +86,8 @@ public class ContentDebugView extends ScrollView {
             if (displayViews.size() <= i) {
                 InfoDisplayView displayView = new InfoDisplayView(context);
                 displayView.setInfo(distances.get(i));
-                displayViews.add(displayView);
                 displayView.setBackgroundColor(isHighlight ? highlightColor : Color.WHITE);
+                displayViews.add(displayView);
                 body.addView(displayView);
             } else {
                 displayViews.get(i).setInfo(distances.get(i));
@@ -105,10 +108,12 @@ public class ContentDebugView extends ScrollView {
             if (displayViews.size() <= i) {
                 InfoDisplayView displayView = new InfoDisplayView(context);
                 displayView.setInfo(results.get(i));
+                displayView.setBackgroundColor(Color.WHITE);
                 displayViews.add(displayView);
                 body.addView(displayView);
             } else {
                 displayViews.get(i).setInfo(results.get(i));
+                displayViews.get(i).setBackgroundColor(Color.WHITE);
                 displayViews.get(i).setVisibility(VISIBLE);
             }
         }

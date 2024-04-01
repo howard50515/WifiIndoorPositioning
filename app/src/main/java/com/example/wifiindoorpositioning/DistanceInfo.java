@@ -4,7 +4,7 @@ import java.util.Comparator;
 
 public class DistanceInfo {
     // 參考點名字
-    public String samplePoint;
+    public String rpName;
 
     // 參考點與目前點距離
     public float distance;
@@ -14,18 +14,23 @@ public class DistanceInfo {
 
     // 參考點 loss rate = notFoundName / pastFoundNum
     public int pastFoundNum, notFoundNum;
+    public int pastNotFoundNum, foundNum;
 
-    public DistanceInfo(String samplePoint, float distance, float coordinateX, float coordinateY){
-        this(samplePoint, distance, coordinateX, coordinateY, 0, 0);
+    public float weight;
+
+    public DistanceInfo(String rpName, float distance, float coordinateX, float coordinateY){
+        this(rpName, distance, coordinateX, coordinateY, 0, 0, 0, 0);
     }
 
-    public DistanceInfo(String samplePoint, float distance, float coordinateX, float coordinateY, int pastFoundNum, int notFoundNum){
-        this.samplePoint = samplePoint;
+    public DistanceInfo(String rpName, float distance, float coordinateX, float coordinateY, int pastFoundNum, int notFoundNum, int pastNotFoundNum, int foundNum){
+        this.rpName = rpName;
         this.distance = distance;
         this.coordinateX = coordinateX;
         this.coordinateY = coordinateY;
         this.pastFoundNum = pastFoundNum;
         this.notFoundNum = notFoundNum;
+        this.pastNotFoundNum = pastNotFoundNum;
+        this.foundNum = foundNum;
     }
 
     public static Comparator<DistanceInfo> distanceComparable = (distanceInfo, t1) -> {

@@ -1,16 +1,20 @@
 package com.example.wifiindoorpositioning;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
+import android.content.res.AssetManager;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Dictionary;
+import java.util.Enumeration;
 import java.util.Hashtable;
 
 public class ApDataManager {
@@ -28,64 +32,131 @@ public class ApDataManager {
     }
 
     public ArrayList<String> accessPoints;
-    public ArrayList<SamplePoint> fingerprint;
+    public ArrayList<ReferencePoint> fingerprint;
+    public ArrayList<WifiResult> originalResults;
     public ArrayList<WifiResult> results;
     public ArrayList<DistanceInfo> originalDistances;
     public ArrayList<DistanceInfo> displayDistances;
     public ArrayList<DistanceInfo> highlightDistances;
+    public String[] apChoices;
 
+    public static final String apValuesDirectoryName = "ap_values";
+
+    private final Dictionary<String, Coordinate> apCoordinate;
+    private final AssetManager assetManager;
+
+    private final Dictionary<String, HighlightFunction> highlightFunctions = new Hashtable<>();
+    private final Dictionary<String, DisplayFunction> displayFunctions = new Hashtable<>();
+    private final Dictionary<String, WeightFunction> weightFunctions = new Hashtable<>();
+
+    @SuppressLint("DefaultLocale")
     private ApDataManager(Context context) {
+        config = new Config();
 
-        BufferedReader apReader = new BufferedReader(new InputStreamReader(context.getResources().openRawResource(R.raw.ap)));
-        StringBuilder apBuilder = new StringBuilder();
+        assetManager = context.getAssets();
 
-        try {
-            String line;
-            while ((line = apReader.readLine()) != null)
-                apBuilder.append(line).append('\n');
-        } catch (IOException e) {
-            e.printStackTrace();
+        try{
+            apChoices = assetManager.list(apValuesDirectoryName);
+        } catch (IOException ex){
+            throw new RuntimeException();
         }
 
-        BufferedReader apVectorReader = new BufferedReader(new InputStreamReader(context.getResources().openRawResource(R.raw.ap_vector)));
-        StringBuilder apVectorBuilder = new StringBuilder();
+        addHighlightFunction("距離排序k個", (distances, k) -> {
+            ArrayList<DistanceInfo> copy = new ArrayList<>(distances);
 
-        try {
-            String line;
-            while ((line = apVectorReader.readLine()) != null)
-                apVectorBuilder.append(line).append('\n');
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+            copy.sort(DistanceInfo.distanceComparable);
 
-        BufferedReader apCoordinateReader = new BufferedReader(new InputStreamReader(context.getResources().openRawResource(R.raw.ap_coordinate)));
-        StringBuilder apCoordinateBuilder = new StringBuilder();
+            return new ArrayList<>(copy.subList(0, k));
+        });
 
-        try {
-            String line;
-            while ((line = apCoordinateReader.readLine()) != null)
-                apCoordinateBuilder.append(line).append('\n');
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        addDisplayFunction("按照距離排序", distances -> {
+            ArrayList<DistanceInfo> copy = new ArrayList<>(distances);
 
-        accessPoints = new Gson().fromJson(apBuilder.toString(), new TypeToken<ArrayList<String>>(){}.getType());
+            copy.sort(DistanceInfo.distanceComparable);
 
-        fingerprint = new Gson().fromJson(apVectorBuilder.toString(), new TypeToken<ArrayList<SamplePoint>>(){}.getType());
+            return copy;
+        });
 
-        Dictionary<String, Coordinate> apCoordinate = new Gson().fromJson(apCoordinateBuilder.toString(), new TypeToken<Hashtable<String, Coordinate>>(){}.getType());
+        addWeightFunction("KNN", highlights -> {
+            ArrayList<Float> weights = new ArrayList<>();
 
+            float weight = 1f / highlights.size();
+
+            for (int i = 0; i < highlights.size(); i++){
+                weights.add(weight);
+            }
+
+            return weights;
+        });
+
+        setHighlightFunction("距離排序k個");
+        setDisplayFunction("按照距離排序");
+        setWeightFunction("KNN");
+        loadApValueAtIndex(0);
+
+        apCoordinate = new Gson().fromJson(
+                getValue(context.getResources().openRawResource(R.raw.ap_coordinate)),
+                new TypeToken<Hashtable<String, Coordinate>>(){}.getType());
+
+        applyCoordinateToFingerPrint();
+
+        registerOnConfigChangedListener(config -> calculateResult());
+    }
+
+    private void applyCoordinateToFingerPrint(){
         for (int i = 0;i < fingerprint.size(); i++){
-            SamplePoint sp = fingerprint.get(i);
-            Coordinate c = apCoordinate.get(sp.samplePoint);
+            ReferencePoint rp = fingerprint.get(i);
+            Coordinate c = apCoordinate.get(rp.name);
             if (c != null){
-                sp.coordinateX = c.x;
-                sp.coordinateY = c.y;
+                rp.coordinateX = c.x;
+                rp.coordinateY = c.y;
             }
             else{
-                throw new RuntimeException("未提供" + sp.samplePoint + "座標");
+                throw new RuntimeException("未提供" + rp.name + "座標");
             }
         }
+    }
+
+    private String getValue(InputStream stream){
+        BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
+        StringBuilder builder = new StringBuilder();
+
+        try {
+            String line;
+            while ((line = reader.readLine()) != null)
+                builder.append(line).append('\n');
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return builder.toString();
+    }
+
+    public void loadApValue(String valueName){
+        String apPath = apValuesDirectoryName + "/" + valueName + "/ap.txt";
+        String apVectorPath = apValuesDirectoryName + "/" + valueName + "/ap_vector.txt";
+
+        try {
+            accessPoints = new Gson().fromJson(getValue(assetManager.open(apPath)), new TypeToken<ArrayList<String>>(){}.getType());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        try {
+            fingerprint = new Gson().fromJson(getValue(assetManager.open(apVectorPath)), new TypeToken<ArrayList<ReferencePoint>>(){}.getType());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        if (apCoordinate != null){
+            applyCoordinateToFingerPrint();
+        }
+
+        calculateResult();
+    }
+
+    public void loadApValueAtIndex(int index){
+        loadApValue(apChoices[index]);
     }
 
     public ArrayList<Float> getVector(ArrayList<WifiResult> results){
@@ -128,63 +199,72 @@ public class ApDataManager {
         return output;
     }
 
-    public int k = 4;
-    public HighlightAndDisplay defaultHighlightAndDisplay = new HighlightAndDisplay() {
-        @Override
-        public ArrayList<DistanceInfo> highlight(ArrayList<DistanceInfo> distances, int k) {
-            ArrayList<DistanceInfo> copy = new ArrayList<>(distances);
+    public void calculateResult(){
+        if (originalResults == null) return;
 
-            copy.sort(DistanceInfo.distanceComparable);
-
-            return new ArrayList<>(copy.subList(0, k));
-        }
-
-        @Override
-        public ArrayList<DistanceInfo> display(ArrayList<DistanceInfo> distances) {
-            return getDistancesByDistance(distances);
-        }
-    };
-
-    public void setResult(ArrayList<WifiResult> results){
-        this.results = getSelectedApResults(results);
+        this.results = getSelectedApResults(originalResults);
 
         ArrayList<Float> ssids = getVector(results);
 
         ArrayList<DistanceInfo> distances = new ArrayList<>();
-        for (SamplePoint sp : fingerprint){
+        for (ReferencePoint rp : fingerprint){
             float sum = 0;
-            int num = 0;
+            int pastFoundNum = 0;
             int notFoundNum = 0;
+            int pastNotFoundNum = 0;
+            int foundNum = 0;
 
-            for (int j = 0; j < sp.vector.size(); j++){
-                if (sp.vector.get(j) != -100){
-                    num++;
+            for (int j = 0; j < rp.vector.size(); j++){
+                if (rp.vector.get(j) != -100){
+                    pastFoundNum++;
 
                     if (ssids.get(j) == -100){
                         notFoundNum++;
                     }
                 }
+                else{
+                    pastNotFoundNum++;
 
-                float diff = sp.vector.get(j) - ssids.get(j);
+                    if (ssids.get(j) != -100){
+                        foundNum++;
+                    }
+                }
+
+                float diff = rp.vector.get(j) - ssids.get(j);
 
                 sum += diff * diff;
             }
 
-            distances.add(new DistanceInfo(sp.samplePoint, (float)Math.sqrt(sum), sp.coordinateX, sp.coordinateY, num, notFoundNum));
+            distances.add(new DistanceInfo(rp.name, (float)Math.sqrt(sum), rp.coordinateX, rp.coordinateY, pastFoundNum, notFoundNum, pastNotFoundNum, foundNum));
         }
 
         this.originalDistances = new ArrayList<>(distances);
 
-        if (highlightAndDisplayFunction == null){
-            this.displayDistances = defaultHighlightAndDisplay.display(distances);
-            this.highlightDistances = defaultHighlightAndDisplay.highlight(distances, k);
-        }
-        else{
-            this.displayDistances = highlightAndDisplayFunction.display(distances);
-            this.highlightDistances = highlightAndDisplayFunction.highlight(distances, k);
-        }
+        refresh();
+    }
 
-        invokeResultChangedListeners();
+    public void setResult(ArrayList<WifiResult> results){
+        this.originalResults = results;
+
+        calculateResult();
+    }
+
+    private void updateFunction(){
+        if (originalDistances != null){
+            if (this.highlightDistances != null){
+                for (int i = 0; i < highlightDistances.size(); i++){
+                    highlightDistances.get(i).weight = 0;
+                }
+            }
+
+            this.displayDistances = displayFunction.display(originalDistances);
+            this.highlightDistances = highlightFunction.highlight(originalDistances, config.k);
+            ArrayList<Float> weights = weightFunction.weight(highlightDistances);
+
+            for (int i = 0; i < weights.size(); i++){
+                highlightDistances.get(i).weight = weights.get(i);
+            }
+        }
     }
 
     public Coordinate getPredictCoordinate(){
@@ -201,44 +281,16 @@ public class ApDataManager {
 
         if (highlightDistances.size() == 0) return predict;
 
-        // KNN每個人的比例相同 WKNN應該會根據距離改變權重
-        float rate = 1f / highlightDistances.size();
-
         for (int i = 0; i < highlightDistances.size(); i++){
-            predict.x += rate * highlightDistances.get(i).coordinateX;
-            predict.y += rate * highlightDistances.get(i).coordinateY;
+            DistanceInfo info = highlightDistances.get(i);
+
+            predict.x += info.weight * info.coordinateX;
+            predict.y += info.weight * info.coordinateY;
         }
 
         // 回傳預測的座標
         return predict;
     }
-
-    public static ArrayList<DistanceInfo> getDistancesByDistance(ArrayList<DistanceInfo> distances){
-        ArrayList<DistanceInfo> copy = new ArrayList<>(distances);
-
-        copy.sort(DistanceInfo.distanceComparable);
-
-        return copy;
-    }
-
-//    public static ArrayList<DistanceInfo> getDistancesByLossRate(ArrayList<DistanceInfo> distances){
-//
-//        ArrayList<DistanceInfo> output = new ArrayList<>();
-//
-//        output.add(distances.get(0));
-//        output.add(distances.get(1));
-//
-//        return output;
-//    }
-//
-//    public static ArrayList<DistanceInfo> getDistancesByK(ArrayList<DistanceInfo> distances){
-//        ArrayList<DistanceInfo> output = new ArrayList<>();
-//
-//        output.add(distances.get(0));
-//        output.add(distances.get(1));
-//
-//        return output;
-//    }
 
     public class Coordinate{
         public float x, y;
@@ -250,6 +302,8 @@ public class ApDataManager {
             this.y = y;
         }
     }
+
+    //region OnResultChangedListener
 
     private final ArrayList<OnResultChangedListener> resultChangedListeners = new ArrayList<>();
 
@@ -271,15 +325,183 @@ public class ApDataManager {
         void resultChanged();
     }
 
-    private HighlightAndDisplay highlightAndDisplayFunction;
+    //endregion
 
-    public void setHighlightAndDisplayFunction(HighlightAndDisplay function){
-        highlightAndDisplayFunction = function;
+    //region Function相關
+
+    private HighlightFunction highlightFunction;
+    private String highlightFunctionName;
+    private DisplayFunction displayFunction;
+    private String displayFunctionName;
+    private WeightFunction weightFunction;
+    private String weightFunctionName;
+
+    private void refresh(){
+        if (originalDistances == null) return;
+
+        updateFunction();
+
+        invokeResultChangedListeners();
     }
 
-    public interface HighlightAndDisplay{
+    public void addHighlightFunction(String name, HighlightFunction function){
+        highlightFunctions.put(name, function);
+    }
+
+    public void setHighlightFunction(String name){
+        highlightFunction = highlightFunctions.get(name);
+
+        highlightFunctionName = name;
+
+        refresh();
+    }
+
+    public void addDisplayFunction(String name, DisplayFunction function){
+        displayFunctions.put(name, function);
+    }
+
+    public void setDisplayFunction(String name){
+        displayFunction = displayFunctions.get(name);
+
+        displayFunctionName = name;
+
+        refresh();
+    }
+
+    public void addWeightFunction(String name, WeightFunction function){
+        weightFunctions.put(name, function);
+    }
+
+    public void setWeightFunction(String name){
+        weightFunction = weightFunctions.get(name);
+
+        weightFunctionName = name;
+
+        refresh();
+    }
+
+    public int getCurrentHighlightFunctionIndex(){
+        Enumeration<String> keys = highlightFunctions.keys();
+
+        int index = 0;
+        while (keys.hasMoreElements()){
+            if (highlightFunctionName.equals(keys.nextElement())){
+                return index;
+            }
+
+            index++;
+        }
+
+        return -1;
+    }
+
+    public ArrayList<String> getAllHighlightFunctionNames(){
+        Enumeration<String> keys = highlightFunctions.keys();
+
+        ArrayList<String> names = new ArrayList<>();
+        while (keys.hasMoreElements()){
+            names.add(keys.nextElement());
+        }
+
+        return names;
+    }
+
+    public int getCurrentDisplayFunctionIndex(){
+        Enumeration<String> keys = displayFunctions.keys();
+
+        int index = 0;
+        while (keys.hasMoreElements()){
+            if (displayFunctionName.equals(keys.nextElement())){
+                return index;
+            }
+
+            index++;
+        }
+
+        return -1;
+    }
+
+    public ArrayList<String> getAllDisplayFunctionNames(){
+        Enumeration<String> keys = displayFunctions.keys();
+
+        ArrayList<String> names = new ArrayList<>();
+        while (keys.hasMoreElements()){
+            names.add(keys.nextElement());
+        }
+
+        return names;
+    }
+
+    public int getCurrentWeightFunctionIndex(){
+        Enumeration<String> keys = weightFunctions.keys();
+
+        int index = 0;
+        while (keys.hasMoreElements()){
+            if (weightFunctionName.equals(keys.nextElement())){
+                return index;
+            }
+
+            index++;
+        }
+
+        return -1;
+    }
+
+    public ArrayList<String> getAllWeightFunctionNames(){
+        Enumeration<String> keys = weightFunctions.keys();
+
+        ArrayList<String> names = new ArrayList<>();
+        while (keys.hasMoreElements()){
+            names.add(keys.nextElement());
+        }
+
+        return names;
+    }
+
+    public interface HighlightFunction{
         ArrayList<DistanceInfo> highlight(ArrayList<DistanceInfo> distances, int k);
+    }
+
+    public interface DisplayFunction{
         ArrayList<DistanceInfo> display(ArrayList<DistanceInfo> distances);
+    }
+
+    public interface WeightFunction{
+        ArrayList<Float> weight(ArrayList<DistanceInfo> highlights);
+    }
+
+    //endregion
+
+    private Config config;
+
+    public Config getConfig(){
+        return config;
+    }
+
+    public class Config{
+        public int k = 4;
+        public int referencePointRadius = 20;
+        public boolean displayReferencePoint = true;
+    }
+
+    private final ArrayList<OnConfigChangedListener> configChangedListeners = new ArrayList<>();
+
+    public void invokeConfigChangedListener(){
+        for (OnConfigChangedListener listener : configChangedListeners){
+            listener.onConfigChanged(config);
+        }
+    }
+
+    public void registerOnConfigChangedListener(OnConfigChangedListener listener){
+        configChangedListeners.add(listener);
+    }
+
+    public void unregisterOnConfigChangedListener(OnConfigChangedListener listener){
+        configChangedListeners.remove(listener);
+    }
+
+    public interface OnConfigChangedListener{
+        void onConfigChanged(Config config);
     }
 }
 

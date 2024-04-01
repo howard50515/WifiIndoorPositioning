@@ -2,7 +2,6 @@ package com.example.wifiindoorpositioning;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.res.TypedArray;
 import android.util.AttributeSet;
 import android.view.Gravity;
 import android.widget.LinearLayout;
@@ -53,10 +52,13 @@ public class InfoDisplayView extends LinearLayout {
 
     @SuppressLint("DefaultLocale")
     public void setInfo(DistanceInfo distanceInfo){
-        txtViewSSID.setText(distanceInfo.samplePoint);
+        txtViewSSID.setText(distanceInfo.rpName);
         txtViewBSSID.setText(String.valueOf(distanceInfo.distance));
         txtViewLevel.setText(String.format("(%.2f, %.2f)", distanceInfo.coordinateX, distanceInfo.coordinateY));
-        txtViewFrequency.setText(String.format("%d/%d: %.2f", distanceInfo.notFoundNum, distanceInfo.pastFoundNum, (float)distanceInfo.notFoundNum / distanceInfo.pastFoundNum));
+        txtViewFrequency.setText(String.format("loss rate: %d/%d (%.2f), new rate: %d/%d (%.2f)\nweight: %.4f",
+                distanceInfo.notFoundNum, distanceInfo.pastFoundNum, (float)distanceInfo.notFoundNum / distanceInfo.pastFoundNum,
+                distanceInfo.foundNum, distanceInfo.pastNotFoundNum, (float)distanceInfo.foundNum / distanceInfo.pastNotFoundNum,
+                distanceInfo.weight));
     }
 
     public void setInfo(WifiResult result){

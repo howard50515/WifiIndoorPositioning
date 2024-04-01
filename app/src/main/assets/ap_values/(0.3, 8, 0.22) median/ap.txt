@@ -1,0 +1,19 @@
+[
+    "NCUEE_1F_5G_Guest:3c:7c:3f:a5:36:55",
+    "NCUCE:00:16:40:10:06:37",
+    "NCUEE_1F_5G_Guest:3c:7c:3f:a5:36:6d",
+    "NCUEE_1F:3c:7c:3f:a5:36:6c",
+    "Shi-lab-5G:50:d4:f7:44:60:56",
+    "NCUEE_1F_5G_Guest:3c:7c:3f:a5:31:15",
+    "SChiu5G:70:4f:57:b9:6b:18",
+    "NCUEE_1F_5G_Guest:3c:7c:3f:b4:4d:e5",
+    "NCUEE_1F:3c:7c:3f:a5:36:5c",
+    "NCUEE_1F:3c:7c:3f:b4:4d:e4",
+    "ASUSchiu2.4_5G:d4:5d:64:76:f0:d4",
+    "NewBnlab_5G:0c:9d:92:54:2a:64",
+    "NCUCE_802.1x:02:35:40:10:06:36",
+    "NCUEE_1F:24:4b:fe:d0:ee:44",
+    "NCUCE:00:16:40:10:06:35",
+    "NCUEE_1F_5G_Guest:24:4b:fe:d0:ee:45",
+    "BNLAB_AX:78:98:e8:57:d4:02"
+]
