@@ -144,6 +144,44 @@ public class MainActivity extends AppCompatActivity {
 
             return weights;
         });
+        ApDataManager.getInstance().addWeightFunction("WKNN", new ApDataManager.WeightFunction() {
+            @Override
+            public ArrayList<Float> weight(ArrayList<DistanceInfo> highlights) {
+                ArrayList<Float> weights = new ArrayList<>();
+
+                // 以下是WKNN
+                float sum = 0; // 距離倒數的總和
+                float sumOfSamplePoints_x = 0; // pi/Di
+                float sumOfSamplePoints_y = 0;
+
+                for (int i = 0; i < highlights.size(); i++){
+                    DistanceInfo distance = highlights.get(i);
+                    sum += 1/distance.distance;
+//                    weights.add()
+//                    sumOfSamplePoints_x += distance.coordinateX / distance.distance;
+//                    sumOfSamplePoints_y += distance.coordinateY / distance.distance;
+                    // predict.x += (distance.coordinateX / distance.distance) / sum;
+                    // predict.y += (distance.coordinateY / distance.distance) / sum;
+                }
+
+                for (int i = 0; i < highlights.size(); i++){
+                    DistanceInfo distance = highlights.get(i);
+                    float weight = 1/distance.distance / sum;
+                    weights.add(weight);
+//                    sumOfSamplePoints_x += distance.coordinateX / distance.distance;
+//                    sumOfSamplePoints_y += distance.coordinateY / distance.distance;
+                    // predict.x += (distance.coordinateX / distance.distance) / sum;
+                    // predict.y += (distance.coordinateY / distance.distance) / sum;
+                }
+
+//                predict.x = sumOfSamplePoints_x / sum;
+//                predict.y = sumOfSamplePoints_y / sum;
+//
+//                // 回傳預測的座標
+//                return predict;
+                return weights;
+            }
+        });
 
         inputAcceptDifference.addTextChangedListener(new TextWatcher() {
             @Override
