@@ -16,9 +16,5 @@ public class ApDistanceInfo {
         this.predictCoordinate = predictCoordinate;
     }
 
-    public static Comparator<ApDistanceInfo> distanceComparator = (left, right) -> {
-        if (Math.abs(left.distance - right.distance) < 0.0001) return 0;
-
-        return (int) (left.distance - right.distance);
-    };
+    public static Comparator<ApDistanceInfo> distanceComparator = (left, right) -> Float.compare(left.distance, right.distance);
 }

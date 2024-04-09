@@ -33,9 +33,5 @@ public class DistanceInfo {
         this.foundNum = foundNum;
     }
 
-    public static Comparator<DistanceInfo> distanceComparable = (distanceInfo, t1) -> {
-        if (Math.abs(distanceInfo.distance - t1.distance) < 0.001f) return 0;
-
-        return distanceInfo.distance > t1.distance ? 1 : -1;
-    };
+    public static Comparator<DistanceInfo> distanceComparable = (distanceInfo, t1) -> Float.compare(distanceInfo.distance, t1.distance);
 }
