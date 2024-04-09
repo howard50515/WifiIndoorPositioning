@@ -3,6 +3,8 @@ package com.example.wifiindoorpositioning;
 import android.Manifest;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -19,12 +21,15 @@ import android.os.Build;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
+import com.google.gson.Gson;
+
 import java.util.ArrayList;
 import java.util.List;
 
 public class SystemServiceManager implements SensorEventListener {
     public WifiManager wifiManager;
     public SensorManager sensorManager;
+    public ClipboardManager clipboardManager;
     public Sensor accelerateSensor, magneticSensor;
     public float[] accelerateValues = new float[3], magneticValues = new float[3];
 
@@ -37,6 +42,7 @@ public class SystemServiceManager implements SensorEventListener {
 
         wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
         sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
+        clipboardManager = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
 
 
         permission = ActivityCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
@@ -61,6 +67,11 @@ public class SystemServiceManager implements SensorEventListener {
         sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
         accelerateSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         magneticSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+    }
+
+    public void toClipBoard(Object obj){
+        ClipData clipData = ClipData.newPlainText("", new Gson().toJson(obj));
+        clipboardManager.setPrimaryClip(clipData);
     }
 
     public static final int CODE_SUCCESS = 0;

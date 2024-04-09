@@ -40,17 +40,44 @@
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/testPointView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_below="@id/referencePointView" >
+        android:layout_below="@id/referencePointView"
+        android:paddingTop="5dp"
+        android:paddingBottom="5dp" >
+
+        <Spinner
+            android:id="@+id/testPointSpinner"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:textSize="30sp" />
+
+        <TextView
+            android:id="@+id/txtTestPointCoordinate"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:layout_weight="2"
+            android:text="測試點座標" android:textSize="16sp" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/bodyK"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_below="@id/testPointView" >
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:gravity="center"
             android:layout_weight="1"
-            android:text="k： "/>
+            android:text="k： " android:textSize="16sp" android:textColor="@color/black" />
 
         <EditText
             android:id="@+id/inputK"
@@ -60,6 +87,25 @@
             android:inputType="number"
             android:layout_weight="1"
             android:hint="4" android:textSize="16sp" android:textColor="@color/black" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/bodyK" >
+
+        <com.example.wifiindoorpositioning.FunctionView
+            android:id="@+id/highlightFunctionView"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1" />
+
+        <com.example.wifiindoorpositioning.FunctionView
+            android:id="@+id/weightFunctionView"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1" />
 
     </LinearLayout>
 

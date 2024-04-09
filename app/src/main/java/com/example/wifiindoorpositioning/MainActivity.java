@@ -15,6 +15,8 @@ import android.widget.ImageView;
 import android.widget.Spinner;
 import android.widget.TextView;
 
+import com.example.wifiindoorpositioning.function.DistanceRateHighlightFunction;
+
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
@@ -29,12 +31,13 @@ public class MainActivity extends AppCompatActivity {
     private HighlightButton btScan, btSettings;
     private SettingsView settingsView;
 
-    private float acceptDifference = 0.4f;
+    private final Float[] acceptDifference = new Float[] { 0.4f };
 
     @SuppressLint({"ClickableViewAccessibility", "SetTextI18n", "DefaultLocale"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        ConfigManager.createInstance(this);
         ApDataManager.createInstance(this);
 
         setContentView(R.layout.activity_main);
@@ -55,45 +58,8 @@ public class MainActivity extends AppCompatActivity {
         contentView = findViewById(R.id.contentView);
         settingsView = new SettingsView(this);
 
-        ApDataManager.getInstance().addHighlightFunction("距離前40%", new ApDataManager.HighlightFunction() {
-            @Override
-            public ArrayList<DistanceInfo> highlight(ArrayList<DistanceInfo> distances, int k) {
-                // distances 每個參考點到目前位置的預測資訊
-                // k 也可以先不管就先挑你覺得效果好的
-                // for (int i = 0; i < distances.size(); i++){
-                    // 拿到單一參考點資訊
-                    // 可以到 DistanceInfo 看一下有什麼變數
-                    // DistanceInfo distance = distances.get(i);
-                    /* 透過距離、loss rate 等，決定最後highlight的參考點 */
-                // }
-
-                ArrayList<DistanceInfo> highlight = new ArrayList<>(distances);
-
-                highlight.sort(DistanceInfo.distanceComparable);
-
-                if (highlight.size() <= 1) return highlight;
-
-                float dis = highlight.get(0).distance;
-                int maxK = Math.min(highlight.size(), 5);
-                int i = 1;
-                while (i < maxK){
-                    if ((highlight.get(i).distance / dis) - 1 > acceptDifference){
-                        break;
-                    }
-
-                    i++;
-                }
-
-                int dynamicK = i;
-
-                // 回傳想要highlight的點
-                return new ArrayList<>(highlight.subList(0, dynamicK));
-
-                // 目前為預測距離最近的k個
-                // return ApDataManager.getInstance().defaultHighlightAndDisplay.highlight(distances, k);
-            }
-        });
-        ApDataManager.getInstance().setHighlightFunction("距離前40%");
+        ApDataManager.getInstance().addHighlightFunction("距離前?%", new DistanceRateHighlightFunction(acceptDifference));
+        ApDataManager.getInstance().setHighlightFunction("距離前?%");
         ApDataManager.getInstance().addWeightFunction("自訂權重", highlights -> {
             ArrayList<Float> weights = new ArrayList<>();
             if (highlights.size() == 0) return weights;
@@ -123,7 +89,7 @@ public class MainActivity extends AppCompatActivity {
 
             float avgRate = totalRate / highlights.size();
 
-            float multiplier =  ((max / min) - 1) / acceptDifference;
+            float multiplier =  ((max / min) - 1) / acceptDifference[0];
 
             float total = 0;
             for (int i = 0; i < highlights.size(); i++){
@@ -192,9 +158,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
                 try{
-                    acceptDifference = Float.parseFloat(inputAcceptDifference.getText().toString());
+                    acceptDifference[0] = Float.parseFloat(inputAcceptDifference.getText().toString());
 
-                    ApDataManager.getInstance().calculateResult();
+                    ApDataManager.getInstance().calculateResult(ApDataManager.HIGHLIGHT_FUNCTION_CHANGED);
                 } catch (NumberFormatException ignored) {}
             }
 
@@ -258,6 +224,8 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        contentView.setMainActivity(this);
+        contentView.setActualPoint(ConfigManager.getInstance().testPoint.coordinateX, ConfigManager.getInstance().testPoint.coordinateY);
         mapImage.setReferencePoints(ApDataManager.getInstance().fingerprint);
         mapImage.setNorthOffset(180);
         mapImage.setOnImagePointChangedListener(new ZoomableImageView.OnImagePointChangedListener() {
@@ -267,7 +235,7 @@ public class MainActivity extends AppCompatActivity {
                 float diffX = x - p.x;
                 float diffY = y - p.y;
 
-                txtDistance.setText(String.format("%.2f", Math.sqrt(diffX * diffX + diffY * diffY)));
+                txtDistance.setText(String.format("%.2f, (%.2f, %.2f)", Math.sqrt(diffX * diffX + diffY * diffY), p.x, p.y));
             }
         });
         mapImage.setOnFingerPointChangedListener(new ZoomableImageView.OnFingerPointChangedListener() {
@@ -277,7 +245,9 @@ public class MainActivity extends AppCompatActivity {
                 float diffX = x - p.x;
                 float diffY = y - p.y;
 
-                txtDistance.setText(String.format("%.2f", Math.sqrt(diffX * diffX + diffY * diffY)));
+                txtDistance.setText(String.format("%.2f, (%.2f, %.2f)", Math.sqrt(diffX * diffX + diffY * diffY), x, y));
+
+                contentView.setActualPoint(x, y);
             }
         });
 
@@ -327,6 +297,14 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
+    }
+
+    public void setApValueFunctions(String apValueName, String highlightFunctionName, String weightFunctionName){
+        System.out.println(apValueName + " " + highlightFunctionName + " " + weightFunctionName);
+
+        apValueModeSpinner.setSelection(ApDataManager.getInstance().getApValueIndex(apValueName));
+        highlightModeSpinner.setSelection(ApDataManager.getInstance().getHighlightFunctionIndex(highlightFunctionName));
+        weightModeSpinner.setSelection(ApDataManager.getInstance().getWeightFunctionIndex(weightFunctionName));
     }
 
     //region Sensor相關

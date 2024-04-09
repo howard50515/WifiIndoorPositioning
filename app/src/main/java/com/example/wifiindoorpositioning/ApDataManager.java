@@ -42,17 +42,21 @@ public class ApDataManager {
 
     public static final String apValuesDirectoryName = "ap_values";
 
-    private final Dictionary<String, Coordinate> apCoordinate;
+    private final Dictionary<String, Coordinate> referencePointsCoordinate;
+
     private final AssetManager assetManager;
 
-    private final Dictionary<String, HighlightFunction> highlightFunctions = new Hashtable<>();
-    private final Dictionary<String, DisplayFunction> displayFunctions = new Hashtable<>();
-    private final Dictionary<String, WeightFunction> weightFunctions = new Hashtable<>();
+    private final Hashtable<String, DisplayFunction> displayFunctions = new Hashtable<>();
+
+    public final static int UNCERTAIN_CHANGED = -1;
+    public final static int WIFI_RESULT_CHANGED = 0;
+    public final static int AP_VALUE_CHANGED = 1;
+    public final static int HIGHLIGHT_FUNCTION_CHANGED = 2;
+    public final static int DISPLAY_FUNCTION_CHANGED = 3;
+    public final static int WEIGHT_FUNCTION_CHANGED = 4;
 
     @SuppressLint("DefaultLocale")
     private ApDataManager(Context context) {
-        config = new Config();
-
         assetManager = context.getAssets();
 
         try{
@@ -92,21 +96,20 @@ public class ApDataManager {
         setHighlightFunction("距離排序k個");
         setDisplayFunction("按照距離排序");
         setWeightFunction("KNN");
-        loadApValueAtIndex(0);
 
-        apCoordinate = new Gson().fromJson(
-                getValue(context.getResources().openRawResource(R.raw.ap_coordinate)),
+        referencePointsCoordinate = new Gson().fromJson(
+                getValue(context.getResources().openRawResource(R.raw.rp_coordinate)),
                 new TypeToken<Hashtable<String, Coordinate>>(){}.getType());
 
-        applyCoordinateToFingerPrint();
+        loadApValueAtIndex(0);
 
-        registerOnConfigChangedListener(config -> calculateResult());
+        ConfigManager.getInstance().registerOnConfigChangedListener(() -> calculateResult(UNCERTAIN_CHANGED));
     }
 
-    private void applyCoordinateToFingerPrint(){
+    private void applyCoordinateToFingerPrint(ArrayList<ReferencePoint> fingerprint){
         for (int i = 0;i < fingerprint.size(); i++){
             ReferencePoint rp = fingerprint.get(i);
-            Coordinate c = apCoordinate.get(rp.name);
+            Coordinate c = referencePointsCoordinate.get(rp.name);
             if (c != null){
                 rp.coordinateX = c.x;
                 rp.coordinateY = c.y;
@@ -117,7 +120,7 @@ public class ApDataManager {
         }
     }
 
-    private String getValue(InputStream stream){
+    public static String getValue(InputStream stream){
         BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
         StringBuilder builder = new StringBuilder();
 
@@ -136,30 +139,94 @@ public class ApDataManager {
         String apPath = apValuesDirectoryName + "/" + valueName + "/ap.txt";
         String apVectorPath = apValuesDirectoryName + "/" + valueName + "/ap_vector.txt";
 
-        try {
-            accessPoints = new Gson().fromJson(getValue(assetManager.open(apPath)), new TypeToken<ArrayList<String>>(){}.getType());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        accessPoints = loadAccessPoints(assetManager, apPath);
 
-        try {
-            fingerprint = new Gson().fromJson(getValue(assetManager.open(apVectorPath)), new TypeToken<ArrayList<ReferencePoint>>(){}.getType());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        fingerprint = loadFingerPrint(assetManager, apVectorPath);
 
-        if (apCoordinate != null){
-            applyCoordinateToFingerPrint();
-        }
+        applyCoordinateToFingerPrint(fingerprint);
 
-        calculateResult();
+        calculateResult(AP_VALUE_CHANGED);
     }
 
     public void loadApValueAtIndex(int index){
         loadApValue(apChoices[index]);
     }
 
-    public ArrayList<Float> getVector(ArrayList<WifiResult> results){
+    public int getApValueIndex(String name){
+        for (int i = 0; i < apChoices.length; i++){
+            if (apChoices[i].equals(name)){
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    public Coordinate getCoordinateWithApValueAtIndex(int index, HighlightFunction highlightFunction, WeightFunction weightFunction){
+        String valueName = apChoices[index];
+
+        String apPath = apValuesDirectoryName + "/" + valueName + "/ap.txt";
+        String apVectorPath = apValuesDirectoryName + "/" + valueName + "/ap_vector.txt";
+
+        if (originalResults == null) return new Coordinate();
+
+        ArrayList<String> accessPoints = loadAccessPoints(assetManager, apPath);
+
+        ArrayList<ReferencePoint> fingerprint = loadFingerPrint(assetManager, apVectorPath);
+
+        applyCoordinateToFingerPrint(fingerprint);
+
+        ArrayList<DistanceInfo> distances = getDistances(fingerprint, getVector(getSelectedApResults(originalResults, accessPoints), accessPoints));
+
+        ArrayList<DistanceInfo> highlights = getHighlights(distances, ConfigManager.getInstance().k, highlightFunction);
+
+        ArrayList<Float> weights = getWeights(highlights, weightFunction);
+
+        setHighlightWeights(highlights, weights);
+
+        return getPredictCoordinate(highlights);
+    }
+
+    public ArrayList<ApDistanceInfo> getAllApValues(){
+        if (originalResults == null) return null;
+
+        ArrayList<ApDistanceInfo> apDistances = new ArrayList<>();
+
+        ConfigManager configManager = ConfigManager.getInstance();
+        Dictionary<String, HighlightFunction> highlightFunctions = configManager.highlightFunctions;
+        Dictionary<String, WeightFunction> weightFunctions = configManager.weightFunctions;
+        ArrayList<String> highlightNames = configManager.getAllEnableHighlightFunctionNames();
+        ArrayList<String> weightNames = configManager.getAllEnableWeightFunctionNames();
+
+        for (int i = 0; i < apChoices.length; i++){
+            for (String highlightName : highlightNames){
+                for (String weightName : weightNames){
+                    apDistances.add(new ApDistanceInfo(apChoices[i], highlightName, weightName,
+                            getCoordinateWithApValueAtIndex(i, highlightFunctions.get(highlightName), weightFunctions.get(weightName))));
+                }
+            }
+        }
+
+        return apDistances;
+    }
+
+    private static ArrayList<String> loadAccessPoints(AssetManager assetManager, String path){
+        try {
+            return new Gson().fromJson(getValue(assetManager.open(path)), new TypeToken<ArrayList<String>>(){}.getType());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static ArrayList<ReferencePoint> loadFingerPrint(AssetManager assetManager, String path){
+        try {
+            return new Gson().fromJson(getValue(assetManager.open(path)), new TypeToken<ArrayList<ReferencePoint>>(){}.getType());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static ArrayList<Float> getVector(ArrayList<WifiResult> results, ArrayList<String> accessPoints){
         ArrayList<Float> ssids = new ArrayList<>(accessPoints.size());
         for (int i = 0; i < accessPoints.size(); i++){
             float level = -100f;
@@ -177,7 +244,7 @@ public class ApDataManager {
         return ssids;
     }
 
-    public ArrayList<WifiResult> getSelectedApResults(ArrayList<WifiResult> results){
+    public static ArrayList<WifiResult> getSelectedApResults(ArrayList<WifiResult> results, ArrayList<String> accessPoints){
         ArrayList<WifiResult> output = new ArrayList<>();
 
         for (String apName : accessPoints){
@@ -199,15 +266,10 @@ public class ApDataManager {
         return output;
     }
 
-    public void calculateResult(){
-        if (originalResults == null) return;
-
-        this.results = getSelectedApResults(originalResults);
-
-        ArrayList<Float> ssids = getVector(results);
-
+    public static ArrayList<DistanceInfo> getDistances(ArrayList<ReferencePoint> rps, ArrayList<Float> ssids){
         ArrayList<DistanceInfo> distances = new ArrayList<>();
-        for (ReferencePoint rp : fingerprint){
+
+        for (ReferencePoint rp : rps){
             float sum = 0;
             int pastFoundNum = 0;
             int notFoundNum = 0;
@@ -238,51 +300,73 @@ public class ApDataManager {
             distances.add(new DistanceInfo(rp.name, (float)Math.sqrt(sum), rp.coordinateX, rp.coordinateY, pastFoundNum, notFoundNum, pastNotFoundNum, foundNum));
         }
 
+        return distances;
+    }
+
+    public void calculateResult(int changeCode){
+        if (originalResults == null) return;
+
+        this.results = getSelectedApResults(originalResults, accessPoints);
+
+        ArrayList<Float> ssids = getVector(results, accessPoints);
+
+        ArrayList<DistanceInfo> distances = getDistances(fingerprint, ssids);
+
         this.originalDistances = new ArrayList<>(distances);
 
-        refresh();
+        refresh(changeCode);
     }
 
     public void setResult(ArrayList<WifiResult> results){
         this.originalResults = results;
 
-        calculateResult();
+        calculateResult(WIFI_RESULT_CHANGED);
     }
 
     private void updateFunction(){
         if (originalDistances != null){
-            if (this.highlightDistances != null){
-                for (int i = 0; i < highlightDistances.size(); i++){
-                    highlightDistances.get(i).weight = 0;
-                }
-            }
+            resetDistancesWeight();
 
-            this.displayDistances = displayFunction.display(originalDistances);
-            this.highlightDistances = highlightFunction.highlight(originalDistances, config.k);
-            ArrayList<Float> weights = weightFunction.weight(highlightDistances);
+            this.displayDistances = getDisplays(originalDistances, displayFunction);
+            this.highlightDistances = getHighlights(originalDistances, ConfigManager.getInstance().k, highlightFunction);
 
-            for (int i = 0; i < weights.size(); i++){
-                highlightDistances.get(i).weight = weights.get(i);
+            setHighlightWeights(highlightDistances, getWeights(highlightDistances, weightFunction));
+        }
+    }
+
+    private void resetDistancesWeight(){
+        if (this.highlightDistances != null){
+            for (int i = 0; i < highlightDistances.size(); i++){
+                highlightDistances.get(i).weight = 0;
             }
         }
     }
 
-    public Coordinate getPredictCoordinate(){
-        // highlightDistances 為被選定的參考點
-        // 利用 highlightDistances 計算權重位置
-        // for (int i = 0; i < highlightDistances.size(); i++){
-            // 可以到 DistanceInfo 看一下有什麼變數
-            // DistanceInfo distance = highlightDistances.get(i); // 單一參考點資訊
-            /* 計算距離倒數的總和、各個參考點的距離的權重等 */
-        // }
+    private static void setHighlightWeights(ArrayList<DistanceInfo> highlights, ArrayList<Float> weights){
+        for (int i = 0; i < weights.size(); i++){
+            highlights.get(i).weight = weights.get(i);
+        }
+    }
 
-        // 底下為KNN的範例
+    public static ArrayList<Float> getWeights(ArrayList<DistanceInfo> highlights, WeightFunction function){
+        return function.weight(highlights);
+    }
+
+    public static ArrayList<DistanceInfo> getHighlights(ArrayList<DistanceInfo> distances, int k, HighlightFunction function){
+        return function.highlight(distances, k);
+    }
+
+    public static ArrayList<DistanceInfo> getDisplays(ArrayList<DistanceInfo> distances, DisplayFunction function){
+        return function.display(distances);
+    }
+
+    public static Coordinate getPredictCoordinate(ArrayList<DistanceInfo> highlights){
         Coordinate predict = new Coordinate();
 
-        if (highlightDistances.size() == 0) return predict;
+        if (highlights.size() == 0) return predict;
 
-        for (int i = 0; i < highlightDistances.size(); i++){
-            DistanceInfo info = highlightDistances.get(i);
+        for (int i = 0; i < highlights.size(); i++){
+            DistanceInfo info = highlights.get(i);
 
             predict.x += info.weight * info.coordinateX;
             predict.y += info.weight * info.coordinateY;
@@ -292,7 +376,7 @@ public class ApDataManager {
         return predict;
     }
 
-    public class Coordinate{
+    public static class Coordinate{
         public float x, y;
 
         public Coordinate() {}
@@ -307,9 +391,9 @@ public class ApDataManager {
 
     private final ArrayList<OnResultChangedListener> resultChangedListeners = new ArrayList<>();
 
-    private void invokeResultChangedListeners(){
+    private void invokeResultChangedListeners(int changeCode){
         for (OnResultChangedListener listener : resultChangedListeners){
-            listener.resultChanged();
+            listener.resultChanged(changeCode);
         }
     }
 
@@ -322,7 +406,7 @@ public class ApDataManager {
     }
 
     public interface OnResultChangedListener{
-        void resultChanged();
+        void resultChanged(int changeCode);
     }
 
     //endregion
@@ -336,24 +420,24 @@ public class ApDataManager {
     private WeightFunction weightFunction;
     private String weightFunctionName;
 
-    private void refresh(){
+    private void refresh(int changeCode){
         if (originalDistances == null) return;
 
         updateFunction();
 
-        invokeResultChangedListeners();
+        invokeResultChangedListeners(changeCode);
     }
 
     public void addHighlightFunction(String name, HighlightFunction function){
-        highlightFunctions.put(name, function);
+        ConfigManager.getInstance().addHighlightFunction(name, function);
     }
 
     public void setHighlightFunction(String name){
-        highlightFunction = highlightFunctions.get(name);
+        highlightFunction = ConfigManager.getInstance().highlightFunctions.get(name);
 
         highlightFunctionName = name;
 
-        refresh();
+        refresh(HIGHLIGHT_FUNCTION_CHANGED);
     }
 
     public void addDisplayFunction(String name, DisplayFunction function){
@@ -365,27 +449,27 @@ public class ApDataManager {
 
         displayFunctionName = name;
 
-        refresh();
+        refresh(DISPLAY_FUNCTION_CHANGED);
     }
 
     public void addWeightFunction(String name, WeightFunction function){
-        weightFunctions.put(name, function);
+        ConfigManager.getInstance().addWeightFunction(name, function);
     }
 
     public void setWeightFunction(String name){
-        weightFunction = weightFunctions.get(name);
+        weightFunction = ConfigManager.getInstance().weightFunctions.get(name);
 
         weightFunctionName = name;
 
-        refresh();
+        refresh(WEIGHT_FUNCTION_CHANGED);
     }
 
-    public int getCurrentHighlightFunctionIndex(){
-        Enumeration<String> keys = highlightFunctions.keys();
+    public int getHighlightFunctionIndex(String name){
+        Enumeration<String> keys = ConfigManager.getInstance().highlightFunctions.keys();
 
         int index = 0;
         while (keys.hasMoreElements()){
-            if (highlightFunctionName.equals(keys.nextElement())){
+            if (name.equals(keys.nextElement())){
                 return index;
             }
 
@@ -395,8 +479,12 @@ public class ApDataManager {
         return -1;
     }
 
+    public int getCurrentHighlightFunctionIndex(){
+        return getHighlightFunctionIndex(highlightFunctionName);
+    }
+
     public ArrayList<String> getAllHighlightFunctionNames(){
-        Enumeration<String> keys = highlightFunctions.keys();
+        Enumeration<String> keys = ConfigManager.getInstance().highlightFunctions.keys();
 
         ArrayList<String> names = new ArrayList<>();
         while (keys.hasMoreElements()){
@@ -432,12 +520,12 @@ public class ApDataManager {
         return names;
     }
 
-    public int getCurrentWeightFunctionIndex(){
-        Enumeration<String> keys = weightFunctions.keys();
+    public int getWeightFunctionIndex(String name){
+        Enumeration<String> keys = ConfigManager.getInstance().weightFunctions.keys();
 
         int index = 0;
         while (keys.hasMoreElements()){
-            if (weightFunctionName.equals(keys.nextElement())){
+            if (name.equals(keys.nextElement())){
                 return index;
             }
 
@@ -447,8 +535,12 @@ public class ApDataManager {
         return -1;
     }
 
+    public int getCurrentWeightFunctionIndex(){
+        return getWeightFunctionIndex(weightFunctionName);
+    }
+
     public ArrayList<String> getAllWeightFunctionNames(){
-        Enumeration<String> keys = weightFunctions.keys();
+        Enumeration<String> keys = ConfigManager.getInstance().weightFunctions.keys();
 
         ArrayList<String> names = new ArrayList<>();
         while (keys.hasMoreElements()){
@@ -471,37 +563,5 @@ public class ApDataManager {
     }
 
     //endregion
-
-    private Config config;
-
-    public Config getConfig(){
-        return config;
-    }
-
-    public class Config{
-        public int k = 4;
-        public int referencePointRadius = 20;
-        public boolean displayReferencePoint = true;
-    }
-
-    private final ArrayList<OnConfigChangedListener> configChangedListeners = new ArrayList<>();
-
-    public void invokeConfigChangedListener(){
-        for (OnConfigChangedListener listener : configChangedListeners){
-            listener.onConfigChanged(config);
-        }
-    }
-
-    public void registerOnConfigChangedListener(OnConfigChangedListener listener){
-        configChangedListeners.add(listener);
-    }
-
-    public void unregisterOnConfigChangedListener(OnConfigChangedListener listener){
-        configChangedListeners.remove(listener);
-    }
-
-    public interface OnConfigChangedListener{
-        void onConfigChanged(Config config);
-    }
 }
 

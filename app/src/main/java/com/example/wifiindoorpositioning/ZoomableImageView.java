@@ -29,14 +29,15 @@ import java.util.List;
 public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageView {
     private ScrollView scrollView;
     private final Matrix matrix;
-    private Paint circlePaint, arcPaint, pointsPaint, highlightPaint, fingerPaint;
+    private Paint circlePaint, arcPaint, pointsPaint, testPointsPaint, highlightPaint, fingerPaint;
     private Mode mode;
-    private final ArrayList<PointF> points = new ArrayList<>();
     private final PointF imagePoint = new PointF(100, 100);
     private final PointF fingerPoint = new PointF(2854, 1407);
     private float lookAngle = 0, northOffset = 0;
 
     private ArrayList<ReferencePoint> drawPoints;
+
+    private ArrayList<ReferencePoint> testPoints;
 
     private List<DistanceInfo> highlights;
 
@@ -50,21 +51,28 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
 
         zoomImageSettings();
 
+        setFingerPoint(ConfigManager.getInstance().testPoint.coordinateX, ConfigManager.getInstance().testPoint.coordinateY);
+
         ApDataManager.getInstance().registerOnResultChangedListener(new ApDataManager.OnResultChangedListener() {
             @Override
-            public void resultChanged() {
-                ApDataManager.Coordinate c = ApDataManager.getInstance().getPredictCoordinate();
-                setImagePoint(c.x * coordinateDensityScalar,
-                        c.y * coordinateDensityScalar);
+            public void resultChanged(int code) {
+                ApDataManager.Coordinate c = ApDataManager.getPredictCoordinate(ApDataManager.getInstance().highlightDistances);
+                setImagePoint(c.x, c.y);
                 setHighlights(ApDataManager.getInstance().highlightDistances);
             }
         });
-        ApDataManager.getInstance().registerOnConfigChangedListener(config -> postInvalidate());
+        ConfigManager.getInstance().registerOnConfigChangedListener(() -> {
+            ReferencePoint testPoint = ConfigManager.getInstance().testPoint;
+
+            setFingerPoint(testPoint.coordinateX, testPoint.coordinateY);
+
+            postInvalidate();
+        });
     }
 
     public void screenPointToImagePoint(PointF p, float pointX, float pointY){
-        p.set((pointX - values[2]) / values[0],
-                (pointY - values[5]) / values[4]);
+        p.set((pointX - values[2]) / values[0] / coordinateDensityScalar,
+                (pointY - values[5]) / values[4] / coordinateDensityScalar);
     }
 
     public PointF screenPointToImagePoint(float pointX, float pointY){
@@ -75,7 +83,7 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
         return p;
     }
 
-    public void ImagePointToScreenPoint(PointF p, float pointX, float pointY){
+    public void imagePointToScreenPoint(PointF p, float pointX, float pointY){
         p.set(pointX * values[0] + values[2],
                 pointY * values[4] + values[5]);
     }
@@ -120,6 +128,9 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
 
         postInvalidate();
     }
+    public void setTestPoints(ArrayList<ReferencePoint> testPoints){
+        this.testPoints = testPoints;
+    }
 
     public void setHighlights(ArrayList<DistanceInfo> distances){
         highlights = distances;
@@ -132,6 +143,15 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
     }
 
     private void setFingerPoint(float x, float y){
+        fingerPoint.set(x, y);
+
+        if (fingerPointChangedListener != null){
+            fingerPointChangedListener.pointChange(fingerPoint.x, fingerPoint.y);
+        }
+
+        postInvalidate();
+    }
+    private void setFingerPointWithScreenPoint(float x, float y){
         screenPointToImagePoint(fingerPoint, x, y);
 
         if (fingerPointChangedListener != null){
@@ -143,6 +163,8 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
     private final static float arcSize = 200;
     private RadialGradient gradient;
     private void canvasSettings(){
+        setBackgroundColor(Color.valueOf(0.3f, 0.3f, 0.3f, 0.3f).toArgb());
+
         circlePaint = new Paint();
         circlePaint.setColor(Color.BLUE);
         circlePaint.setStyle(Paint.Style.FILL);
@@ -162,17 +184,20 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
         highlightPaint.setStyle(Paint.Style.FILL);
 
         fingerPaint = new Paint();
-        fingerPaint.setColor(Color.valueOf(1, 0, 1, 0.6f).toArgb());
+        fingerPaint.setColor(Color.BLACK);
         fingerPaint.setStyle(Paint.Style.FILL);
     }
 
     public float density, width, height, coordinateDensityScalar;
+    private float minScale, displayWidth, displayHeight;
     public static final float defaultDensity = 2.625f;
 
     @SuppressLint("ClickableViewAccessibility")
     private void zoomImageSettings(){
 
         DisplayMetrics displayMetrics = getContext().getResources().getDisplayMetrics();
+
+        displayWidth = displayMetrics.widthPixels;
 
         BitmapDrawable drawable = (BitmapDrawable) getDrawable();
 
@@ -186,16 +211,17 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
             width = bitmap.getWidth();
             height = bitmap.getHeight();
 
-            float scale = Math.min(displayMetrics.widthPixels / (width * density),
+            minScale = Math.min(displayMetrics.widthPixels / (width * density),
                     displayMetrics.heightPixels / (height * density));
 
-            matrix.setScale(scale, scale);
+            matrix.setScale(minScale, minScale);
         }
 
         setImageMatrix(matrix);
 
         setOnTouchListener(new OnTouchListener() {
             private final Matrix changeMatrix = new Matrix(matrix);
+            private final float[] changeMatrixValues = new float[9];
             private float lastPointX, lastPointY, dis, midX, midY;
             private long time;
             @Override
@@ -204,7 +230,7 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
                     case MotionEvent.ACTION_DOWN:
                         mode = Mode.Drag;
                         time = Calendar.getInstance().getTimeInMillis();
-                        setFingerPoint(event.getX(), event.getY());
+                        changeMatrix.getValues(changeMatrixValues);
                         lastPointX = event.getX();
                         lastPointY = event.getY();
                         if (scrollView != null)
@@ -212,7 +238,11 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
                         break;
                     case MotionEvent.ACTION_UP:
                         mode = Mode.None;
+                        if (Calendar.getInstance().getTimeInMillis() - time <= 100) {
+                            setFingerPointWithScreenPoint(event.getX(), event.getY());
+                        }
                         changeMatrix.set(matrix);
+                        changeMatrix.getValues(changeMatrixValues);
                         if (scrollView != null)
                             scrollView.requestDisallowInterceptTouchEvent(false);
                         break;
@@ -223,6 +253,30 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
                                 float x = event.getX() - lastPointX;
                                 float y = event.getY() - lastPointY;
 
+                                float changeX = changeMatrixValues[2] + x;
+                                float changeY = changeMatrixValues[5] + y;
+                                float diffX = displayWidth * ((changeMatrixValues[0] / minScale) - 1);
+                                float diffY = displayHeight * ((changeMatrixValues[4] / minScale) - 1);
+
+                                if (diffX < 0){
+                                    x = -changeMatrixValues[2] + (displayWidth - (width * density * changeMatrixValues[0])) / 2f;
+                                }
+                                else if (diffX + changeX < -50){
+                                    x = -diffX - changeMatrixValues[2] - 50;
+                                }
+                                else if (changeX > 50){
+                                    x = 50 - changeMatrixValues[2];
+                                }
+                                if (diffY < 0){
+                                    y = -changeMatrixValues[5] + (displayHeight - (height * density * changeMatrixValues[4])) / 2f;;
+                                }
+                                else if (diffY + changeY < -50){
+                                    y = -diffY - changeMatrixValues[5] - 50;
+                                }
+                                else if (changeY > 50){
+                                    y = 50 - changeMatrixValues[5];
+                                }
+
                                 matrix.set(changeMatrix);
                                 matrix.postTranslate(x, y);
                             }
@@ -232,6 +286,10 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
 
                             float scale = newDis / dis;
 
+                            if (changeMatrixValues[0] * scale < minScale * 0.9f){
+                                scale = minScale * 0.9f / changeMatrixValues[0];
+                            }
+
                             matrix.set(changeMatrix);
                             matrix.postScale(scale, scale, midX, midY);
                         }
@@ -239,6 +297,7 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
                     case MotionEvent.ACTION_POINTER_DOWN:
                         mode = Mode.Zoom;
                         changeMatrix.set(matrix);
+                        changeMatrix.getValues(changeMatrixValues);
                         midX = midPoint(event.getX(1), event.getX(0));
                         midY = midPoint(event.getY(1), event.getY(0));
                         dis = distance(event);
@@ -260,6 +319,8 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
         observer.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
             @Override
             public void onGlobalLayout() {
+                displayHeight = getHeight();
+
                 ZoomableImageView.this.getViewTreeObserver().removeOnGlobalLayoutListener(this);
                 if (scrollView == null){
                     ViewParent temp = getParent();
@@ -301,27 +362,10 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
 
         matrix.getValues(values);
 
-        float x = imagePoint.x * values[0] + values[2];
-        float y = imagePoint.y * values[4] + values[5];
+        ConfigManager configManager = ConfigManager.getInstance();
 
-        gradient.setLocalMatrix(matrix);
-
-        float half = arcSize / 2 * values[0];
-        canvas.drawArc(x - half, y - half, x + half, y + half,
-                northOffset + lookAngle - 60, 120, true, arcPaint);
-
-        canvas.drawColor(Color.TRANSPARENT);
-        canvas.drawCircle(x, y, 10 * values[0], circlePaint);
-
-        float fingerX = fingerPoint.x * values[0] + values[2];
-        float fingerY = fingerPoint.y * values[4] + values[5];
-
-        canvas.drawCircle(fingerX, fingerY, 20 * values[0], fingerPaint);
-
-        ApDataManager.Config config = ApDataManager.getInstance().getConfig();
-
-        float pointRadius = config.referencePointRadius * values[0];
-        if (config.displayReferencePoint && drawPoints != null){
+        float pointRadius = configManager.referencePointRadius * values[0];
+        if (configManager.displayReferencePoint && drawPoints != null){
             for (ReferencePoint rp : drawPoints){
                 float screenX = rp.coordinateX * coordinateDensityScalar * values[0] + values[2];
                 float screenY = rp.coordinateY * coordinateDensityScalar * values[4] + values[5];
@@ -342,6 +386,23 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
                 }
             }
         }
+
+        float x = imagePoint.x * coordinateDensityScalar * values[0] + values[2];
+        float y = imagePoint.y * coordinateDensityScalar * values[4] + values[5];
+
+        gradient.setLocalMatrix(matrix);
+
+        float half = arcSize / 2 * values[0];
+        canvas.drawArc(x - half, y - half, x + half, y + half,
+                northOffset + lookAngle - 60, 120, true, arcPaint);
+
+        canvas.drawColor(Color.TRANSPARENT);
+        canvas.drawCircle(x, y, 10 * values[0], circlePaint);
+
+        float fingerX = fingerPoint.x * coordinateDensityScalar * values[0] + values[2];
+        float fingerY = fingerPoint.y * coordinateDensityScalar * values[4] + values[5];
+
+        canvas.drawCircle(fingerX, fingerY, 20 * values[0], fingerPaint);
     }
 
 

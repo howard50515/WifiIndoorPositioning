@@ -67,4 +67,12 @@ public class InfoDisplayView extends LinearLayout {
         txtViewLevel.setText(result.level == -100 ? "notfound" : "");
         txtViewFrequency.setText("");
     }
+
+    @SuppressLint("DefaultLocale")
+    public void setInfo(ApDistanceInfo apDistance){
+        txtViewSSID.setText(apDistance.apValueName);
+        txtViewBSSID.setText(apDistance.highlightFunctionName);
+        txtViewLevel.setText(apDistance.weightFunctionName);
+        txtViewFrequency.setText(String.format("(%.2f ,%.2f) distance: %.2f", apDistance.predictCoordinate.x , apDistance.predictCoordinate.y, apDistance.distance));
+    }
 }
