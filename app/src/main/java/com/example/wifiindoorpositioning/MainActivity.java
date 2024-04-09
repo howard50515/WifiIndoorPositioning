@@ -58,6 +58,68 @@ public class MainActivity extends AppCompatActivity {
         contentView = findViewById(R.id.contentView);
         settingsView = new SettingsView(this);
 
+        ApDataManager.getInstance().addHighlightFunction("取低loss rate", new ApDataManager.HighlightFunction() {
+            @Override
+            public ArrayList<DistanceInfo> highlight(ArrayList<DistanceInfo> distances, int k) {
+                ArrayList<DistanceInfo> sortDistances = new ArrayList<>(distances);
+
+                sortDistances.sort(DistanceInfo.distanceComparable);
+
+//                for (int i = 0 ; i < sortDistances.size(); i++) {
+//                    if (sortDistances.get(i).rpName.equals("102"))
+//                        Log.i(sortDistances.get(i).rpName, String.valueOf(sortDistances.get(i).distance));
+//                }
+//
+//                Log.i("", distances.get(0).rpName);
+
+                if (sortDistances.size() <= 1) return sortDistances;
+
+                //System.out.printf(distances.get(0).rpName);
+
+                float[] LR = new float[sortDistances.size()];
+                int notFoundNum = sortDistances.get(0).notFoundNum;
+                int pastFoundNum = sortDistances.get(0).pastFoundNum;
+                LR[0] = (float) notFoundNum / pastFoundNum;
+
+                for (int i = sortDistances.size() - 1; i > 0; i--) {
+                    notFoundNum = sortDistances.get(i).notFoundNum;
+                    pastFoundNum = sortDistances.get(i).pastFoundNum;
+                    LR[i] = (float) notFoundNum / pastFoundNum;
+                    if(LR[i] > LR[0]) {
+                        sortDistances.remove(i);
+                    }
+                }
+
+
+                return new ArrayList<>(sortDistances.subList(0, Math.min(k, sortDistances.size())));
+            }
+        });
+        ApDataManager.getInstance().addHighlightFunction("取低new rate", new ApDataManager.HighlightFunction() {
+            @Override
+            public ArrayList<DistanceInfo> highlight(ArrayList<DistanceInfo> distances, int k) {
+                ArrayList<DistanceInfo> sortDistances = new ArrayList<>(distances);
+
+                sortDistances.sort(DistanceInfo.distanceComparable);
+
+                if (sortDistances.size() <= 1) return sortDistances;
+
+                float[] NR = new float[sortDistances.size()];
+                int foundNum = sortDistances.get(0).foundNum;
+                int pastNotFoundNum = sortDistances.get(0).pastNotFoundNum;
+                NR[0] = (float) foundNum / pastNotFoundNum;
+
+                for (int i = sortDistances.size() - 1; i > 0; i--) {
+                    foundNum = sortDistances.get(i).foundNum;
+                    pastNotFoundNum = sortDistances.get(i).pastNotFoundNum;
+                    NR[i] = (float) foundNum / pastNotFoundNum;
+                    if(NR[i] > NR[0]) {
+                        sortDistances.remove(i);
+                    }
+                }
+
+                return new ArrayList<>(sortDistances.subList(0, Math.min(k, sortDistances.size())));
+            }
+        });
         ApDataManager.getInstance().addHighlightFunction("距離前?%", new DistanceRateHighlightFunction(acceptDifference));
         ApDataManager.getInstance().setHighlightFunction("距離前?%");
         ApDataManager.getInstance().addWeightFunction("自訂權重", highlights -> {
