@@ -210,7 +210,36 @@ public class MainActivity extends AppCompatActivity {
                 return weights;
             }
         });
+        ApDataManager.getInstance().addWeightFunction("new WKNN", new ApDataManager.WeightFunction() {
+            @Override
+            public ArrayList<Float> weight(ArrayList<DistanceInfo> highlights) {
+                ArrayList<Float> weights = new ArrayList<>();
 
+                // new WKNN
+                float distance_sum = 0; // 距離差總和
+                float threshold = 0; // 距離最遠的AP
+
+                // 找出哪個AP距離最遠
+                for(int i = 0; i < highlights.size(); i++){
+                    if(highlights.get(i).distance > threshold){
+                        threshold = highlights.get(i).distance;
+                    }
+                }
+
+                for (int i = 0; i < highlights.size(); i++){
+                    DistanceInfo distance = highlights.get(i);
+                    distance_sum += (threshold - distance.distance);
+                }
+
+                for (int i = 0; i < highlights.size(); i++){
+                    DistanceInfo distance = highlights.get(i);
+                    float weight = (threshold - distance.distance) / distance_sum;
+                    weights.add(weight);
+                }
+
+                return weights;
+            }
+        });
         inputAcceptDifference.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
