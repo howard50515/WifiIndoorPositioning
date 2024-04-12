@@ -1,12 +1,16 @@
-package com.example.wifiindoorpositioning;
+package com.example.wifiindoorpositioning.manager;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.res.AssetManager;
 
-import com.example.wifiindoorpositioning.function.DistanceRateHighlightFunction;
+import com.example.wifiindoorpositioning.R;
+import com.example.wifiindoorpositioning.datatype.TestPoint;
+
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Dictionary;
 import java.util.Enumeration;
@@ -27,35 +31,68 @@ public class ConfigManager {
     }
 
     private ConfigManager(Context context){
-        addHighlightFunction("距離前40%", new DistanceRateHighlightFunction(0.4f));
-        addHighlightFunction("距離前30%", new DistanceRateHighlightFunction(0.3f));
-        addHighlightFunction("距離前20%", new DistanceRateHighlightFunction(0.2f));
+        AssetManager assetManager = context.getAssets();
+
+        try{
+            apValues = assetManager.list(ApDataManager.apValuesDirectoryName);
+        } catch (IOException ex){
+            throw new RuntimeException();
+        }
+
+        for (String name : apValues){
+            enableApValues.put(name, true);
+        }
 
         Hashtable<String, ApDataManager.Coordinate> testPointsCoordinate = new Gson().fromJson(
                 ApDataManager.getValue(context.getResources().openRawResource(R.raw.tp_coordinate)),
                 new TypeToken<Hashtable<String, ApDataManager.Coordinate>>(){}.getType());
         testPoints = new ArrayList<>();
-        testPointsCoordinate.forEach((name, coordinate) -> testPoints.add(new ReferencePoint(name, coordinate)));
+        testPointsCoordinate.forEach((name, coordinate) -> testPoints.add(new TestPoint(name, coordinate)));
 
         setTestPointAtIndex(0);
     }
 
     public int k = 4;
-    public int referencePointRadius = 20;
+    public int referencePointRadius = 20, actualPointRadius = 20, predictPointRadius = 20;
     public boolean displayReferencePoint = true;
+
+    public String[] apValues;
+    public Dictionary<String, Boolean> enableApValues = new Hashtable<>();
     public Dictionary<String, ApDataManager.HighlightFunction> highlightFunctions = new Hashtable<>();
     public Dictionary<String, Boolean> enableHighlightFunctions = new Hashtable<>();
     public Dictionary<String, ApDataManager.WeightFunction> weightFunctions = new Hashtable<>();
     public Dictionary<String, Boolean> enableWeightFunctions = new Hashtable<>();
-    public ReferencePoint testPoint;
+    public TestPoint testPoint;
 
-    private final ArrayList<ReferencePoint> testPoints;
+    public int getApValueIndex(String name){
+        for (int i = 0; i < apValues.length; i++){
+            if (apValues[i].equals(name)){
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    public ArrayList<String> getAllEnableApValueNames(){
+        ArrayList<String> names = new ArrayList<>();
+
+        for (String name : apValues){
+            if (enableApValues.get(name)){
+                names.add(name);
+            }
+        }
+
+        return names;
+    }
+
+    private final ArrayList<TestPoint> testPoints;
 
     public void setTestPointAtIndex(int index) {
         this.testPoint = testPoints.get(index);
     }
 
-    public ReferencePoint getTestPointAtIndex(int index) {
+    public TestPoint getTestPointAtIndex(int index) {
         return testPoints.get(index);
     }
 

@@ -9,6 +9,10 @@ import android.widget.TextView;
 
 import androidx.annotation.Nullable;
 
+import com.example.wifiindoorpositioning.datatype.ApDistanceInfo;
+import com.example.wifiindoorpositioning.datatype.DistanceInfo;
+import com.example.wifiindoorpositioning.datatype.WifiResult;
+
 public class InfoDisplayView extends LinearLayout {
 
     private final Context context;
@@ -17,6 +21,8 @@ public class InfoDisplayView extends LinearLayout {
     private TextView txtViewBSSID;
     private TextView txtViewLevel;
     private TextView txtViewFrequency;
+
+    public ApDistanceInfo apDistance;
 
     public InfoDisplayView(Context context) {
         super(context);
@@ -70,6 +76,8 @@ public class InfoDisplayView extends LinearLayout {
 
     @SuppressLint("DefaultLocale")
     public void setInfo(ApDistanceInfo apDistance){
+        this.apDistance = apDistance;
+
         txtViewSSID.setText(apDistance.apValueName);
         txtViewBSSID.setText(apDistance.highlightFunctionName);
         txtViewLevel.setText(apDistance.weightFunctionName);

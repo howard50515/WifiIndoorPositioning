@@ -19,22 +19,31 @@
             android:id="@+id/apDistanceInfoControlPanel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:orientation="horizontal" >
 
             <Spinner
                 android:id="@+id/testPointSpinner1"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:layout_weight="1"
+                android:layout_weight="1.5"
                 android:textAlignment="center" />
 
+            <TextView
+                android:id="@+id/txtTestPoint"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1.5"
+                android:gravity="center"
+                android:text="測試點" android:textSize="16sp" />
+
             <com.example.wifiindoorpositioning.HighlightButton
+                android:id="@+id/btCopy"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:background="@drawable/background_rectangle_transparent_unfocus"
                 app:backgroundTint="@null"
-                android:text="複製" android:textSize="16sp" android:textColor="@color/black" />
+                android:text="複製" android:textSize="16sp" />
 
         </LinearLayout>
 

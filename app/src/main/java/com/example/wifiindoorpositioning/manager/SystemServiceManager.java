@@ -1,7 +1,6 @@
-package com.example.wifiindoorpositioning;
+package com.example.wifiindoorpositioning.manager;
 
 import android.Manifest;
-import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -21,23 +20,38 @@ import android.os.Build;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
+import com.example.wifiindoorpositioning.datatype.WifiResult;
+
 import com.google.gson.Gson;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class SystemServiceManager implements SensorEventListener {
+    private static SystemServiceManager instance;
+
+    public static void createInstance(AppCompatActivity context){
+        if (instance != null)
+            return;
+
+        instance = new SystemServiceManager(context);
+    }
+
+    public static SystemServiceManager getInstance(){
+        return instance;
+    }
+
     public WifiManager wifiManager;
     public SensorManager sensorManager;
     public ClipboardManager clipboardManager;
     public Sensor accelerateSensor, magneticSensor;
     public float[] accelerateValues = new float[3], magneticValues = new float[3];
 
-    private Activity context;
+    private final AppCompatActivity context;
     private BroadcastReceiver receiver;
     private boolean permission;
 
-    public SystemServiceManager(AppCompatActivity context){
+    private SystemServiceManager(AppCompatActivity context){
         this.context = context;
 
         wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
@@ -70,6 +84,10 @@ public class SystemServiceManager implements SensorEventListener {
     }
 
     public void toClipBoard(Object obj){
+//        GsonBuilder gsonBuilder = new GsonBuilder();
+//        gsonBuilder.setPrettyPrinting();
+//
+//        ClipData clipData = ClipData.newPlainText("", gsonBuilder.create().toJson(obj));
         ClipData clipData = ClipData.newPlainText("", new Gson().toJson(obj));
         clipboardManager.setPrimaryClip(clipData);
     }
@@ -95,11 +113,9 @@ public class SystemServiceManager implements SensorEventListener {
 
         boolean scanSymbol = wifiManager.startScan();
 
+        completeCallback = callback;
         if (!scanSymbol){
             callback.complete(CODE_NO_LOCATION, null);
-        }
-        else{
-            completeCallback = callback;
         }
     }
 

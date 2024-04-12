@@ -1,4 +1,10 @@
-package com.example.wifiindoorpositioning;
+package com.example.wifiindoorpositioning.datatype;
+
+import android.annotation.SuppressLint;
+
+import androidx.annotation.NonNull;
+
+import com.example.wifiindoorpositioning.manager.ApDataManager;
 
 import java.util.Comparator;
 
@@ -17,4 +23,11 @@ public class ApDistanceInfo {
     }
 
     public static Comparator<ApDistanceInfo> distanceComparator = (left, right) -> Float.compare(left.distance, right.distance);
+
+    @SuppressLint("DefaultLocale")
+    @NonNull
+    @Override
+    public String toString() {
+        return String.format("%s %s %s (%.2f, %.2f), %.2f", apValueName, highlightFunctionName, weightFunctionName, predictCoordinate.x, predictCoordinate.y, distance);
+    }
 }

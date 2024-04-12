@@ -14,13 +14,16 @@ import android.widget.RelativeLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 
+import com.example.wifiindoorpositioning.datatype.TestPoint;
+import com.example.wifiindoorpositioning.manager.ConfigManager;
+
 public class SettingsView extends LinearLayout {
     private final Context context;
     private TextView txtTestPointCoordinate;
-    private EditText inputReferencePointRadius, inputK;
+    private EditText inputReferencePointRadius, inputPredictPointRadius, inputActualPointRadius, inputK;
     private CheckBox displayReferencePoint;
     private HighlightButton btConfirm, btCancel;
-    private FunctionView highlightFunctionView, weightFunctionView;
+    private FunctionView apValueView, highlightFunctionView, weightFunctionView;
     private Spinner testPointSpinner;
 
     private boolean isActivate;
@@ -36,10 +39,13 @@ public class SettingsView extends LinearLayout {
         inflate(context, R.layout.window_settingsview, this);
         txtTestPointCoordinate = findViewById(R.id.txtTestPointCoordinate);
         inputReferencePointRadius = findViewById(R.id.inputReferencePointRadius);
+        inputPredictPointRadius = findViewById(R.id.inputPredictPointRadius);
+        inputActualPointRadius = findViewById(R.id.inputActualPointRadius);
         inputK = findViewById(R.id.inputK);
         displayReferencePoint = findViewById(R.id.displayReferencePoint);
         btConfirm = findViewById(R.id.btConfirm);
         btCancel = findViewById(R.id.btCancel);
+        apValueView = findViewById(R.id.apValueView);
         highlightFunctionView = findViewById(R.id.highlightFunctionView);
         weightFunctionView = findViewById(R.id.weightFunctionView);
         testPointSpinner = findViewById(R.id.testPointSpinner);
@@ -64,7 +70,7 @@ public class SettingsView extends LinearLayout {
         testPointSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                ReferencePoint testPoint = ConfigManager.getInstance().getTestPointAtIndex(i);
+                TestPoint testPoint = ConfigManager.getInstance().getTestPointAtIndex(i);
 
                 txtTestPointCoordinate.setText(String.format("(%.2f , %.2f)", testPoint.coordinateX, testPoint.coordinateY));
             }
@@ -99,9 +105,12 @@ public class SettingsView extends LinearLayout {
         ConfigManager config = ConfigManager.getInstance();
 
         config.referencePointRadius = Integer.parseInt(inputReferencePointRadius.getText().toString());
+        config.predictPointRadius = Integer.parseInt(inputPredictPointRadius.getText().toString());
+        config.actualPointRadius = Integer.parseInt(inputActualPointRadius.getText().toString());
         config.displayReferencePoint = displayReferencePoint.isChecked();
         config.k = Integer.parseInt(inputK.getText().toString());
         config.setTestPointAtIndex(testPointSpinner.getSelectedItemPosition());
+        apValueView.getAllChecked(config.enableApValues);
         highlightFunctionView.getAllChecked(config.enableHighlightFunctions);
         weightFunctionView.getAllChecked(config.enableWeightFunctions);
 
@@ -113,10 +122,13 @@ public class SettingsView extends LinearLayout {
         ConfigManager config = ConfigManager.getInstance();
 
         inputReferencePointRadius.setText(String.valueOf(config.referencePointRadius));
+        inputPredictPointRadius.setText(String.valueOf(config.predictPointRadius));
+        inputActualPointRadius.setText(String.valueOf(config.actualPointRadius));
         displayReferencePoint.setChecked(config.displayReferencePoint);
         inputK.setText(String.valueOf(config.k));
         testPointSpinner.setSelection(ConfigManager.getInstance().getCurrentTestPointIndex());
         txtTestPointCoordinate.setText(String.format("(%.2f, %.2f)", config.testPoint.coordinateX, config.testPoint.coordinateY));
+        apValueView.setFunctions(config.apValues, config.enableApValues);
         highlightFunctionView.setFunctions(config.highlightFunctions.keys(), config.enableHighlightFunctions);
         weightFunctionView.setFunctions(config.weightFunctions.keys(), config.enableWeightFunctions);
     }

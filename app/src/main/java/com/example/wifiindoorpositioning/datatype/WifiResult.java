@@ -1,4 +1,4 @@
-package com.example.wifiindoorpositioning;
+package com.example.wifiindoorpositioning.datatype;
 
 import android.net.wifi.ScanResult;
 

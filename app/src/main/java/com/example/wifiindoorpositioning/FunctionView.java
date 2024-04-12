@@ -3,7 +3,6 @@ package com.example.wifiindoorpositioning;
 
 import android.content.Context;
 import android.util.AttributeSet;
-import android.view.View;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
 
@@ -68,6 +67,27 @@ public class FunctionView extends LinearLayout {
             }
 
             i++;
+        }
+    }
+
+    public void setFunctions(String[] names, Dictionary<String, Boolean> checks){
+        hideAllView();
+
+        for (int i = 0; i < names.length; i++){
+            String name = names[i];
+
+            if (checkBoxes.size() <= i) {
+                CheckBox checkBox = new CheckBox(context);
+                checkBox.setTextAlignment(TEXT_ALIGNMENT_CENTER);
+                checkBox.setText(name);
+                checkBox.setChecked(checks.get(name));
+                checkBoxes.add(checkBox);
+                addView(checkBox);
+            } else {
+                checkBoxes.get(i).setText(name);
+                checkBoxes.get(i).setChecked(checks.get(name));
+                checkBoxes.get(i).setVisibility(VISIBLE);
+            }
         }
     }
 }

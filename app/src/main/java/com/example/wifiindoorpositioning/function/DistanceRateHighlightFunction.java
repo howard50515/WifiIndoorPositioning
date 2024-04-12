@@ -1,7 +1,7 @@
 package com.example.wifiindoorpositioning.function;
 
-import com.example.wifiindoorpositioning.ApDataManager;
-import com.example.wifiindoorpositioning.DistanceInfo;
+import com.example.wifiindoorpositioning.manager.ApDataManager;
+import com.example.wifiindoorpositioning.datatype.DistanceInfo;
 
 import java.util.ArrayList;
 

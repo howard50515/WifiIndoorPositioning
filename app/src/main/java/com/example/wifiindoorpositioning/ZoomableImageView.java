@@ -22,6 +22,12 @@ import android.widget.ScrollView;
 
 import androidx.annotation.Nullable;
 
+import com.example.wifiindoorpositioning.datatype.DistanceInfo;
+import com.example.wifiindoorpositioning.datatype.ReferencePoint;
+import com.example.wifiindoorpositioning.datatype.TestPoint;
+import com.example.wifiindoorpositioning.manager.ApDataManager;
+import com.example.wifiindoorpositioning.manager.ConfigManager;
+
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -47,9 +53,9 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
 
         matrix = getImageMatrix();
 
-        canvasSettings();
-
         zoomImageSettings();
+
+        canvasSettings();
 
         setFingerPoint(ConfigManager.getInstance().testPoint.coordinateX, ConfigManager.getInstance().testPoint.coordinateY);
 
@@ -62,11 +68,9 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
             }
         });
         ConfigManager.getInstance().registerOnConfigChangedListener(() -> {
-            ReferencePoint testPoint = ConfigManager.getInstance().testPoint;
+            TestPoint testPoint = ConfigManager.getInstance().testPoint;
 
             setFingerPoint(testPoint.coordinateX, testPoint.coordinateY);
-
-            postInvalidate();
         });
     }
 
@@ -98,10 +102,12 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
         return imagePoint;
     }
 
+    private static final int centerColor = Color.valueOf(0.4f, 0.4f, 0.8f, 0.8f).toArgb();
+    private static final int edgeColor = Color.valueOf(0.4f, 0.4f, 1f, 0.2f).toArgb();
     public void setImagePoint(float x, float y){
         imagePoint.set(x, y);
 
-        gradient = new RadialGradient(x, y, arcSize / 2, 0x700000FF, 0x10000055, Shader.TileMode.CLAMP);
+        gradient = new RadialGradient(x * coordinateDensityScalar, y * coordinateDensityScalar, arcRadius, centerColor, edgeColor, Shader.TileMode.CLAMP);
         arcPaint.setShader(gradient);
 
         if (imagePointChangedListener != null)
@@ -160,7 +166,7 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
 
         postInvalidate();
     }
-    private final static float arcSize = 200;
+    private final static float arcRadius = 200;
     private RadialGradient gradient;
     private void canvasSettings(){
         setBackgroundColor(Color.valueOf(0.3f, 0.3f, 0.3f, 0.3f).toArgb());
@@ -169,7 +175,7 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
         circlePaint.setColor(Color.BLUE);
         circlePaint.setStyle(Paint.Style.FILL);
 
-        gradient = new RadialGradient(imagePoint.x, imagePoint.y, arcSize / 2, 0x700000FF, 0x10000055, Shader.TileMode.CLAMP);
+        gradient = new RadialGradient(imagePoint.x * coordinateDensityScalar, imagePoint.y * coordinateDensityScalar, arcRadius * coordinateDensityScalar, centerColor, edgeColor, Shader.TileMode.CLAMP);
         arcPaint = new Paint();
         arcPaint.setStyle(Paint.Style.FILL);
         arcPaint.setDither(true);
@@ -364,7 +370,7 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
 
         ConfigManager configManager = ConfigManager.getInstance();
 
-        float pointRadius = configManager.referencePointRadius * values[0];
+        float pointRadius = configManager.referencePointRadius * coordinateDensityScalar * values[0];
         if (configManager.displayReferencePoint && drawPoints != null){
             for (ReferencePoint rp : drawPoints){
                 float screenX = rp.coordinateX * coordinateDensityScalar * values[0] + values[2];
@@ -392,17 +398,17 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
 
         gradient.setLocalMatrix(matrix);
 
-        float half = arcSize / 2 * values[0];
+        float half = arcRadius * coordinateDensityScalar * values[0];
         canvas.drawArc(x - half, y - half, x + half, y + half,
                 northOffset + lookAngle - 60, 120, true, arcPaint);
 
         canvas.drawColor(Color.TRANSPARENT);
-        canvas.drawCircle(x, y, 10 * values[0], circlePaint);
+        canvas.drawCircle(x, y, configManager.predictPointRadius * coordinateDensityScalar * values[0], circlePaint);
 
         float fingerX = fingerPoint.x * coordinateDensityScalar * values[0] + values[2];
         float fingerY = fingerPoint.y * coordinateDensityScalar * values[4] + values[5];
 
-        canvas.drawCircle(fingerX, fingerY, 20 * values[0], fingerPaint);
+        canvas.drawCircle(fingerX, fingerY, configManager.actualPointRadius * coordinateDensityScalar * values[0], fingerPaint);
     }
 
 

@@ -5,33 +5,32 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.annotation.SuppressLint;
 import android.graphics.PointF;
 import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Spinner;
 import android.widget.TextView;
 
+import com.example.wifiindoorpositioning.datatype.DistanceInfo;
 import com.example.wifiindoorpositioning.function.DistanceRateHighlightFunction;
+import com.example.wifiindoorpositioning.manager.ApDataManager;
+import com.example.wifiindoorpositioning.manager.ConfigManager;
+import com.example.wifiindoorpositioning.manager.SystemServiceManager;
 
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
-    private SystemServiceManager systemServiceManager;
-
     private ImageView imgCompass;
     private TextView txtOrientation, txtStatus, txtDistance;
-    private EditText inputAcceptDifference;
+    // private EditText inputAcceptDifference;
     private ZoomableImageView mapImage;
     private Spinner debugModeSpinner, apValueModeSpinner, highlightModeSpinner, displayModeSpinner, weightModeSpinner;
     private ContentDebugView contentView;
     private HighlightButton btScan, btSettings;
     private SettingsView settingsView;
 
-    private final Float[] acceptDifference = new Float[] { 0.4f };
+    // private final Float[] acceptDifference = new Float[] { 0.4f };
 
     @SuppressLint({"ClickableViewAccessibility", "SetTextI18n", "DefaultLocale"})
     @Override
@@ -39,6 +38,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         ConfigManager.createInstance(this);
         ApDataManager.createInstance(this);
+        SystemServiceManager.createInstance(this);
 
         setContentView(R.layout.activity_main);
 
@@ -49,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
         mapImage = findViewById(R.id.zoomableView);
         btScan = findViewById(R.id.btScan);
         btSettings = findViewById(R.id.btSettings);
-        inputAcceptDifference = findViewById(R.id.inputAcceptDifference);
+        // inputAcceptDifference = findViewById(R.id.inputAcceptDifference);
         debugModeSpinner = findViewById(R.id.debugModeSpinner);
         apValueModeSpinner = findViewById(R.id.apValueModeSpinner);
         highlightModeSpinner = findViewById(R.id.highlightModeSpinner);
@@ -58,6 +58,9 @@ public class MainActivity extends AppCompatActivity {
         contentView = findViewById(R.id.contentView);
         settingsView = new SettingsView(this);
 
+        ApDataManager.getInstance().addHighlightFunction("距離前20%", new DistanceRateHighlightFunction(0.2f));
+        ApDataManager.getInstance().addHighlightFunction("距離前30%", new DistanceRateHighlightFunction(0.3f));
+        ApDataManager.getInstance().addHighlightFunction("距離前40%", new DistanceRateHighlightFunction(0.4f));
         ApDataManager.getInstance().addHighlightFunction("取低loss rate", new ApDataManager.HighlightFunction() {
             @Override
             public ArrayList<DistanceInfo> highlight(ArrayList<DistanceInfo> distances, int k) {
@@ -120,8 +123,7 @@ public class MainActivity extends AppCompatActivity {
                 return new ArrayList<>(sortDistances.subList(0, Math.min(k, sortDistances.size())));
             }
         });
-        ApDataManager.getInstance().addHighlightFunction("距離前?%", new DistanceRateHighlightFunction(acceptDifference));
-        ApDataManager.getInstance().setHighlightFunction("距離前?%");
+        // ApDataManager.getInstance().addHighlightFunction("距離前?%", new DistanceRateHighlightFunction(acceptDifference));
         ApDataManager.getInstance().addWeightFunction("自訂權重", highlights -> {
             ArrayList<Float> weights = new ArrayList<>();
             if (highlights.size() == 0) return weights;
@@ -137,6 +139,7 @@ public class MainActivity extends AppCompatActivity {
             float min = Float.MAX_VALUE, max = 0;
             for (int i = 0; i < highlights.size(); i++){
                 float distance = highlights.get(i).distance;
+
                 float rate = first / distance;
 
                 totalRate += rate;
@@ -151,7 +154,7 @@ public class MainActivity extends AppCompatActivity {
 
             float avgRate = totalRate / highlights.size();
 
-            float multiplier =  ((max / min) - 1) / acceptDifference[0];
+            float multiplier =  ((max / min) - 1) / 0.4f;
 
             float total = 0;
             for (int i = 0; i < highlights.size(); i++){
@@ -215,6 +218,12 @@ public class MainActivity extends AppCompatActivity {
             public ArrayList<Float> weight(ArrayList<DistanceInfo> highlights) {
                 ArrayList<Float> weights = new ArrayList<>();
 
+                if (highlights.size() == 1){
+                    weights.add(1f);
+
+                    return weights;
+                }
+
                 // new WKNN
                 float distance_sum = 0; // 距離差總和
                 float threshold = 0; // 距離最遠的AP
@@ -240,28 +249,29 @@ public class MainActivity extends AppCompatActivity {
                 return weights;
             }
         });
-        inputAcceptDifference.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
 
-            }
+//        inputAcceptDifference.addTextChangedListener(new TextWatcher() {
+//            @Override
+//            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+//
+//            }
+//
+//            @Override
+//            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+//                try{
+//                    acceptDifference[0] = Float.parseFloat(inputAcceptDifference.getText().toString());
+//
+//                    ApDataManager.getInstance().calculateResult(ApDataManager.HIGHLIGHT_FUNCTION_CHANGED);
+//                } catch (NumberFormatException ignored) {}
+//            }
+//
+//            @Override
+//            public void afterTextChanged(Editable editable) {
+//
+//            }
+//        });
 
-            @Override
-            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                try{
-                    acceptDifference[0] = Float.parseFloat(inputAcceptDifference.getText().toString());
-
-                    ApDataManager.getInstance().calculateResult(ApDataManager.HIGHLIGHT_FUNCTION_CHANGED);
-                } catch (NumberFormatException ignored) {}
-            }
-
-            @Override
-            public void afterTextChanged(Editable editable) {
-
-            }
-        });
-
-        apValueModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ApDataManager.getInstance().apChoices));
+        apValueModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().apValues));
         highlightModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ApDataManager.getInstance().getAllHighlightFunctionNames()));
         displayModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ApDataManager.getInstance().getAllDisplayFunctionNames()));
         weightModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ApDataManager.getInstance().getAllWeightFunctionNames()));
@@ -316,7 +326,6 @@ public class MainActivity extends AppCompatActivity {
         });
 
         contentView.setMainActivity(this);
-        contentView.setActualPoint(ConfigManager.getInstance().testPoint.coordinateX, ConfigManager.getInstance().testPoint.coordinateY);
         mapImage.setReferencePoints(ApDataManager.getInstance().fingerprint);
         mapImage.setNorthOffset(180);
         mapImage.setOnImagePointChangedListener(new ZoomableImageView.OnImagePointChangedListener() {
@@ -338,15 +347,13 @@ public class MainActivity extends AppCompatActivity {
 
                 txtDistance.setText(String.format("%.2f, (%.2f, %.2f)", Math.sqrt(diffX * diffX + diffY * diffY), x, y));
 
-                contentView.setActualPoint(x, y);
+                contentView.setTestPoint(x, y);
             }
         });
 
-        systemServiceManager = new SystemServiceManager(this);
-
         btScan.setOnButtonDownListener(() -> {
             txtStatus.setText("掃描中...");
-            systemServiceManager.scan((code, results) -> {
+            SystemServiceManager.getInstance().scan((code, results) -> {
                 switch (code) {
                     case SystemServiceManager.CODE_SUCCESS:
                         txtStatus.setText("成功");
@@ -369,7 +376,7 @@ public class MainActivity extends AppCompatActivity {
         });
         btSettings.setOnButtonDownListener(() -> settingsView.showView(this));
 
-        systemServiceManager.setOnOrientationChangedListener(degree -> {
+        SystemServiceManager.getInstance().setOnOrientationChangedListener(degree -> {
             imgCompass.setRotation(degree);
             txtOrientation.setText(String.format("%.2f (%s)", degree, getDirection(degree)));
             mapImage.setLookAngle(degree);
@@ -393,7 +400,7 @@ public class MainActivity extends AppCompatActivity {
     public void setApValueFunctions(String apValueName, String highlightFunctionName, String weightFunctionName){
         System.out.println(apValueName + " " + highlightFunctionName + " " + weightFunctionName);
 
-        apValueModeSpinner.setSelection(ApDataManager.getInstance().getApValueIndex(apValueName));
+        apValueModeSpinner.setSelection(ConfigManager.getInstance().getApValueIndex(apValueName));
         highlightModeSpinner.setSelection(ApDataManager.getInstance().getHighlightFunctionIndex(highlightFunctionName));
         weightModeSpinner.setSelection(ApDataManager.getInstance().getWeightFunctionIndex(weightFunctionName));
     }
@@ -424,14 +431,14 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
-        systemServiceManager.registerSensor();
+        SystemServiceManager.getInstance().registerSensor();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
 
-        systemServiceManager.unregisterSensor();
+        SystemServiceManager.getInstance().unregisterSensor();
     }
     //endregion
 }

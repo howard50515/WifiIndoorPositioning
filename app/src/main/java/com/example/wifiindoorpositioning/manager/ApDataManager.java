@@ -1,9 +1,15 @@
-package com.example.wifiindoorpositioning;
+package com.example.wifiindoorpositioning.manager;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.AssetManager;
+
+import com.example.wifiindoorpositioning.R;
+import com.example.wifiindoorpositioning.datatype.ApDistanceInfo;
+import com.example.wifiindoorpositioning.datatype.DistanceInfo;
+import com.example.wifiindoorpositioning.datatype.ReferencePoint;
+import com.example.wifiindoorpositioning.datatype.WifiResult;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -38,7 +44,6 @@ public class ApDataManager {
     public ArrayList<DistanceInfo> originalDistances;
     public ArrayList<DistanceInfo> displayDistances;
     public ArrayList<DistanceInfo> highlightDistances;
-    public String[] apChoices;
 
     public static final String apValuesDirectoryName = "ap_values";
 
@@ -55,15 +60,11 @@ public class ApDataManager {
     public final static int DISPLAY_FUNCTION_CHANGED = 3;
     public final static int WEIGHT_FUNCTION_CHANGED = 4;
 
+    public final static int TEST_POINT_CHANGED = 5;
+
     @SuppressLint("DefaultLocale")
     private ApDataManager(Context context) {
         assetManager = context.getAssets();
-
-        try{
-            apChoices = assetManager.list(apValuesDirectoryName);
-        } catch (IOException ex){
-            throw new RuntimeException();
-        }
 
         addHighlightFunction("距離排序k個", (distances, k) -> {
             ArrayList<DistanceInfo> copy = new ArrayList<>(distances);
@@ -149,24 +150,12 @@ public class ApDataManager {
     }
 
     public void loadApValueAtIndex(int index){
-        loadApValue(apChoices[index]);
+        loadApValue(ConfigManager.getInstance().apValues[index]);
     }
 
-    public int getApValueIndex(String name){
-        for (int i = 0; i < apChoices.length; i++){
-            if (apChoices[i].equals(name)){
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    public Coordinate getCoordinateWithApValueAtIndex(int index, HighlightFunction highlightFunction, WeightFunction weightFunction){
-        String valueName = apChoices[index];
-
-        String apPath = apValuesDirectoryName + "/" + valueName + "/ap.txt";
-        String apVectorPath = apValuesDirectoryName + "/" + valueName + "/ap_vector.txt";
+    public Coordinate getCoordinateWithValues(String apValueName, HighlightFunction highlightFunction, WeightFunction weightFunction){
+        String apPath = apValuesDirectoryName + "/" + apValueName + "/ap.txt";
+        String apVectorPath = apValuesDirectoryName + "/" + apValueName + "/ap_vector.txt";
 
         if (originalResults == null) return new Coordinate();
 
@@ -187,7 +176,7 @@ public class ApDataManager {
         return getPredictCoordinate(highlights);
     }
 
-    public ArrayList<ApDistanceInfo> getAllApValues(){
+    public ArrayList<ApDistanceInfo> getAllApDistances(){
         if (originalResults == null) return null;
 
         ArrayList<ApDistanceInfo> apDistances = new ArrayList<>();
@@ -195,14 +184,15 @@ public class ApDataManager {
         ConfigManager configManager = ConfigManager.getInstance();
         Dictionary<String, HighlightFunction> highlightFunctions = configManager.highlightFunctions;
         Dictionary<String, WeightFunction> weightFunctions = configManager.weightFunctions;
+        ArrayList<String> apValueNames = configManager.getAllEnableApValueNames();
         ArrayList<String> highlightNames = configManager.getAllEnableHighlightFunctionNames();
         ArrayList<String> weightNames = configManager.getAllEnableWeightFunctionNames();
 
-        for (int i = 0; i < apChoices.length; i++){
+        for (String apValueName : apValueNames){
             for (String highlightName : highlightNames){
                 for (String weightName : weightNames){
-                    apDistances.add(new ApDistanceInfo(apChoices[i], highlightName, weightName,
-                            getCoordinateWithApValueAtIndex(i, highlightFunctions.get(highlightName), weightFunctions.get(weightName))));
+                    apDistances.add(new ApDistanceInfo(apValueName, highlightName, weightName,
+                            getCoordinateWithValues(apValueName, highlightFunctions.get(highlightName), weightFunctions.get(weightName))));
                 }
             }
         }
@@ -367,6 +357,8 @@ public class ApDataManager {
 
         for (int i = 0; i < highlights.size(); i++){
             DistanceInfo info = highlights.get(i);
+
+            if (Float.isNaN(info.weight)) System.out.println(highlights.size() + " " + info.distance);
 
             predict.x += info.weight * info.coordinateX;
             predict.y += info.weight * info.coordinateY;

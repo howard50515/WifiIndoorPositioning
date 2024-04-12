@@ -93,15 +93,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <EditText
-            android:id="@+id/inputAcceptDifference"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:inputType="numberDecimal"
-            android:layout_weight="1"
-            android:hint="0.4" android:textSize="16sp" android:textColor="@color/black" />
-
         <Spinner
             android:id="@+id/apValueModeSpinner"
             android:layout_width="0dp"
@@ -109,6 +100,14 @@
             android:gravity="center"
             android:layout_weight="1.5"
             android:textSize="30sp" />
+
+        <Spinner
+            android:id="@+id/highlightModeSpinner"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:layout_weight="1"
+            android:textSize="16sp" />
 
     </LinearLayout>
 
@@ -118,14 +117,6 @@
         android:paddingTop="5dp"
         android:paddingBottom="5dp"
         android:background="@drawable/background_stroke_bottom" >
-
-        <Spinner
-            android:id="@+id/highlightModeSpinner"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:gravity="center"
-            android:layout_weight="1.2"
-            android:textSize="16sp" />
 
         <Spinner
             android:id="@+id/displayModeSpinner"
