@@ -7,6 +7,10 @@ import android.content.res.AssetManager;
 import com.example.wifiindoorpositioning.R;
 import com.example.wifiindoorpositioning.datatype.TestPoint;
 
+import com.example.wifiindoorpositioning.function.DisplayFunction;
+import com.example.wifiindoorpositioning.function.HighlightFunction;
+import com.example.wifiindoorpositioning.function.WeightFunction;
+
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -58,11 +62,14 @@ public class ConfigManager {
 
     public String[] apValues;
     public Dictionary<String, Boolean> enableApValues = new Hashtable<>();
-    public Dictionary<String, ApDataManager.HighlightFunction> highlightFunctions = new Hashtable<>();
+    public Dictionary<String, DisplayFunction> displayFunctions = new Hashtable<>();
+    public Dictionary<String, HighlightFunction> highlightFunctions = new Hashtable<>();
     public Dictionary<String, Boolean> enableHighlightFunctions = new Hashtable<>();
-    public Dictionary<String, ApDataManager.WeightFunction> weightFunctions = new Hashtable<>();
+    public Dictionary<String, WeightFunction> weightFunctions = new Hashtable<>();
     public Dictionary<String, Boolean> enableWeightFunctions = new Hashtable<>();
     public TestPoint testPoint;
+
+    private final ArrayList<TestPoint> testPoints;
 
     public int getApValueIndex(String name){
         for (int i = 0; i < apValues.length; i++){
@@ -85,8 +92,6 @@ public class ConfigManager {
 
         return names;
     }
-
-    private final ArrayList<TestPoint> testPoints;
 
     public void setTestPointAtIndex(int index) {
         this.testPoint = testPoints.get(index);
@@ -117,6 +122,43 @@ public class ConfigManager {
         return -1;
     }
 
+    public ArrayList<String> getAllDisplayFunctionNames(){
+        Enumeration<String> keys = displayFunctions.keys();
+
+        ArrayList<String> names = new ArrayList<>();
+        while (keys.hasMoreElements()){
+            names.add(keys.nextElement());
+        }
+
+        return names;
+    }
+
+    public int getHighlightFunctionIndex(String name){
+        Enumeration<String> keys = ConfigManager.getInstance().highlightFunctions.keys();
+
+        int index = 0;
+        while (keys.hasMoreElements()){
+            if (name.equals(keys.nextElement())){
+                return index;
+            }
+
+            index++;
+        }
+
+        return -1;
+    }
+
+    public ArrayList<String> getAllHighlightFunctionNames(){
+        Enumeration<String> keys = ConfigManager.getInstance().highlightFunctions.keys();
+
+        ArrayList<String> names = new ArrayList<>();
+        while (keys.hasMoreElements()){
+            names.add(keys.nextElement());
+        }
+
+        return names;
+    }
+
     public ArrayList<String> getAllEnableHighlightFunctionNames(){
         ArrayList<String> names = new ArrayList<>();
 
@@ -128,6 +170,32 @@ public class ConfigManager {
             if (enableHighlightFunctions.get(name)){
                 names.add(name);
             }
+        }
+
+        return names;
+    }
+
+    public int getWeightFunctionIndex(String name){
+        Enumeration<String> keys = ConfigManager.getInstance().weightFunctions.keys();
+
+        int index = 0;
+        while (keys.hasMoreElements()){
+            if (name.equals(keys.nextElement())){
+                return index;
+            }
+
+            index++;
+        }
+
+        return -1;
+    }
+
+    public ArrayList<String> getAllWeightFunctionNames(){
+        Enumeration<String> keys = ConfigManager.getInstance().weightFunctions.keys();
+
+        ArrayList<String> names = new ArrayList<>();
+        while (keys.hasMoreElements()){
+            names.add(keys.nextElement());
         }
 
         return names;
@@ -149,20 +217,24 @@ public class ConfigManager {
         return names;
     }
 
-    public void addHighlightFunction(String name, ApDataManager.HighlightFunction function){
+    public void addDisplayFunction(String name, DisplayFunction function){
+        displayFunctions.put(name, function);
+    }
+
+    public void addHighlightFunction(String name, HighlightFunction function){
         addHighlightFunction(name, function, true);
     }
 
-    public void addHighlightFunction(String name, ApDataManager.HighlightFunction function, boolean enable){
+    public void addHighlightFunction(String name, HighlightFunction function, boolean enable){
         highlightFunctions.put(name, function);
         enableHighlightFunctions.put(name, enable);
     }
 
-    public void addWeightFunction(String name, ApDataManager.WeightFunction function){
+    public void addWeightFunction(String name, WeightFunction function){
         addWeightFunction(name, function, true);
     }
 
-    public void addWeightFunction(String name, ApDataManager.WeightFunction function, boolean enable){
+    public void addWeightFunction(String name, WeightFunction function, boolean enable){
         weightFunctions.put(name, function);
         enableWeightFunctions.put(name, enable);
     }

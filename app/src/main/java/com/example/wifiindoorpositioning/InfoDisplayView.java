@@ -81,6 +81,6 @@ public class InfoDisplayView extends LinearLayout {
         txtViewSSID.setText(apDistance.apValueName);
         txtViewBSSID.setText(apDistance.highlightFunctionName);
         txtViewLevel.setText(apDistance.weightFunctionName);
-        txtViewFrequency.setText(String.format("(%.2f ,%.2f) distance: %.2f", apDistance.predictCoordinate.x , apDistance.predictCoordinate.y, apDistance.distance));
+        txtViewFrequency.setText(String.format("(%.2f ,%.2f) distance: %.2f", apDistance.x , apDistance.y, apDistance.distance));
     }
 }

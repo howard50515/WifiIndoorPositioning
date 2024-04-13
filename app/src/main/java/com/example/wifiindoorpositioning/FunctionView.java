@@ -40,7 +40,7 @@ public class FunctionView extends LinearLayout {
         }
     }
 
-    public void getAllChecked(Dictionary<String, Boolean> checks){
+    public void setAllChecked(Dictionary<String, Boolean> checks){
         for (int i = 0; i < checkBoxes.size(); i++){
             checks.put(checkBoxes.get(i).getText().toString(), checkBoxes.get(i).isChecked());
         }

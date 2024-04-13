@@ -11,6 +11,10 @@ import com.example.wifiindoorpositioning.datatype.DistanceInfo;
 import com.example.wifiindoorpositioning.datatype.ReferencePoint;
 import com.example.wifiindoorpositioning.datatype.WifiResult;
 
+import com.example.wifiindoorpositioning.function.DisplayFunction;
+import com.example.wifiindoorpositioning.function.HighlightFunction;
+import com.example.wifiindoorpositioning.function.WeightFunction;
+
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -59,14 +63,13 @@ public class ApDataManager {
     public final static int HIGHLIGHT_FUNCTION_CHANGED = 2;
     public final static int DISPLAY_FUNCTION_CHANGED = 3;
     public final static int WEIGHT_FUNCTION_CHANGED = 4;
-
     public final static int TEST_POINT_CHANGED = 5;
 
     @SuppressLint("DefaultLocale")
     private ApDataManager(Context context) {
         assetManager = context.getAssets();
 
-        addHighlightFunction("距離排序k個", (distances, k) -> {
+        ConfigManager.getInstance().addHighlightFunction("距離排序k個", (distances, k) -> {
             ArrayList<DistanceInfo> copy = new ArrayList<>(distances);
 
             copy.sort(DistanceInfo.distanceComparable);
@@ -74,7 +77,7 @@ public class ApDataManager {
             return new ArrayList<>(copy.subList(0, k));
         });
 
-        addDisplayFunction("按照距離排序", distances -> {
+        ConfigManager.getInstance().addDisplayFunction("按照距離排序", distances -> {
             ArrayList<DistanceInfo> copy = new ArrayList<>(distances);
 
             copy.sort(DistanceInfo.distanceComparable);
@@ -82,7 +85,7 @@ public class ApDataManager {
             return copy;
         });
 
-        addWeightFunction("KNN", highlights -> {
+        ConfigManager.getInstance().addWeightFunction("KNN", highlights -> {
             ArrayList<Float> weights = new ArrayList<>();
 
             float weight = 1f / highlights.size();
@@ -420,20 +423,12 @@ public class ApDataManager {
         invokeResultChangedListeners(changeCode);
     }
 
-    public void addHighlightFunction(String name, HighlightFunction function){
-        ConfigManager.getInstance().addHighlightFunction(name, function);
-    }
-
     public void setHighlightFunction(String name){
         highlightFunction = ConfigManager.getInstance().highlightFunctions.get(name);
 
         highlightFunctionName = name;
 
         refresh(HIGHLIGHT_FUNCTION_CHANGED);
-    }
-
-    public void addDisplayFunction(String name, DisplayFunction function){
-        displayFunctions.put(name, function);
     }
 
     public void setDisplayFunction(String name){
@@ -444,10 +439,6 @@ public class ApDataManager {
         refresh(DISPLAY_FUNCTION_CHANGED);
     }
 
-    public void addWeightFunction(String name, WeightFunction function){
-        ConfigManager.getInstance().addWeightFunction(name, function);
-    }
-
     public void setWeightFunction(String name){
         weightFunction = ConfigManager.getInstance().weightFunctions.get(name);
 
@@ -456,34 +447,8 @@ public class ApDataManager {
         refresh(WEIGHT_FUNCTION_CHANGED);
     }
 
-    public int getHighlightFunctionIndex(String name){
-        Enumeration<String> keys = ConfigManager.getInstance().highlightFunctions.keys();
-
-        int index = 0;
-        while (keys.hasMoreElements()){
-            if (name.equals(keys.nextElement())){
-                return index;
-            }
-
-            index++;
-        }
-
-        return -1;
-    }
-
     public int getCurrentHighlightFunctionIndex(){
-        return getHighlightFunctionIndex(highlightFunctionName);
-    }
-
-    public ArrayList<String> getAllHighlightFunctionNames(){
-        Enumeration<String> keys = ConfigManager.getInstance().highlightFunctions.keys();
-
-        ArrayList<String> names = new ArrayList<>();
-        while (keys.hasMoreElements()){
-            names.add(keys.nextElement());
-        }
-
-        return names;
+        return ConfigManager.getInstance().getHighlightFunctionIndex(highlightFunctionName);
     }
 
     public int getCurrentDisplayFunctionIndex(){
@@ -501,57 +466,8 @@ public class ApDataManager {
         return -1;
     }
 
-    public ArrayList<String> getAllDisplayFunctionNames(){
-        Enumeration<String> keys = displayFunctions.keys();
-
-        ArrayList<String> names = new ArrayList<>();
-        while (keys.hasMoreElements()){
-            names.add(keys.nextElement());
-        }
-
-        return names;
-    }
-
-    public int getWeightFunctionIndex(String name){
-        Enumeration<String> keys = ConfigManager.getInstance().weightFunctions.keys();
-
-        int index = 0;
-        while (keys.hasMoreElements()){
-            if (name.equals(keys.nextElement())){
-                return index;
-            }
-
-            index++;
-        }
-
-        return -1;
-    }
-
     public int getCurrentWeightFunctionIndex(){
-        return getWeightFunctionIndex(weightFunctionName);
-    }
-
-    public ArrayList<String> getAllWeightFunctionNames(){
-        Enumeration<String> keys = ConfigManager.getInstance().weightFunctions.keys();
-
-        ArrayList<String> names = new ArrayList<>();
-        while (keys.hasMoreElements()){
-            names.add(keys.nextElement());
-        }
-
-        return names;
-    }
-
-    public interface HighlightFunction{
-        ArrayList<DistanceInfo> highlight(ArrayList<DistanceInfo> distances, int k);
-    }
-
-    public interface DisplayFunction{
-        ArrayList<DistanceInfo> display(ArrayList<DistanceInfo> distances);
-    }
-
-    public interface WeightFunction{
-        ArrayList<Float> weight(ArrayList<DistanceInfo> highlights);
+        return ConfigManager.getInstance().getWeightFunctionIndex(weightFunctionName);
     }
 
     //endregion

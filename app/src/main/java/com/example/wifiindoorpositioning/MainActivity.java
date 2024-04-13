@@ -14,6 +14,8 @@ import android.widget.TextView;
 
 import com.example.wifiindoorpositioning.datatype.DistanceInfo;
 import com.example.wifiindoorpositioning.function.DistanceRateHighlightFunction;
+import com.example.wifiindoorpositioning.function.HighlightFunction;
+import com.example.wifiindoorpositioning.function.WeightFunction;
 import com.example.wifiindoorpositioning.manager.ApDataManager;
 import com.example.wifiindoorpositioning.manager.ConfigManager;
 import com.example.wifiindoorpositioning.manager.SystemServiceManager;
@@ -58,10 +60,10 @@ public class MainActivity extends AppCompatActivity {
         contentView = findViewById(R.id.contentView);
         settingsView = new SettingsView(this);
 
-        ApDataManager.getInstance().addHighlightFunction("距離前20%", new DistanceRateHighlightFunction(0.2f));
-        ApDataManager.getInstance().addHighlightFunction("距離前30%", new DistanceRateHighlightFunction(0.3f));
-        ApDataManager.getInstance().addHighlightFunction("距離前40%", new DistanceRateHighlightFunction(0.4f));
-        ApDataManager.getInstance().addHighlightFunction("取低loss rate", new ApDataManager.HighlightFunction() {
+        ConfigManager.getInstance().addHighlightFunction("距離前20%", new DistanceRateHighlightFunction(0.2f));
+        ConfigManager.getInstance().addHighlightFunction("距離前30%", new DistanceRateHighlightFunction(0.3f));
+        ConfigManager.getInstance().addHighlightFunction("距離前40%", new DistanceRateHighlightFunction(0.4f));
+        ConfigManager.getInstance().addHighlightFunction("取低loss rate", new HighlightFunction() {
             @Override
             public ArrayList<DistanceInfo> highlight(ArrayList<DistanceInfo> distances, int k) {
                 ArrayList<DistanceInfo> sortDistances = new ArrayList<>(distances);
@@ -97,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
                 return new ArrayList<>(sortDistances.subList(0, Math.min(k, sortDistances.size())));
             }
         });
-        ApDataManager.getInstance().addHighlightFunction("取低new rate", new ApDataManager.HighlightFunction() {
+        ConfigManager.getInstance().addHighlightFunction("取低new rate", new HighlightFunction() {
             @Override
             public ArrayList<DistanceInfo> highlight(ArrayList<DistanceInfo> distances, int k) {
                 ArrayList<DistanceInfo> sortDistances = new ArrayList<>(distances);
@@ -124,7 +126,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         // ApDataManager.getInstance().addHighlightFunction("距離前?%", new DistanceRateHighlightFunction(acceptDifference));
-        ApDataManager.getInstance().addWeightFunction("自訂權重", highlights -> {
+        ConfigManager.getInstance().addWeightFunction("自訂權重", highlights -> {
             ArrayList<Float> weights = new ArrayList<>();
             if (highlights.size() == 0) return weights;
 
@@ -175,7 +177,7 @@ public class MainActivity extends AppCompatActivity {
 
             return weights;
         });
-        ApDataManager.getInstance().addWeightFunction("WKNN", new ApDataManager.WeightFunction() {
+        ConfigManager.getInstance().addWeightFunction("WKNN", new WeightFunction() {
             @Override
             public ArrayList<Float> weight(ArrayList<DistanceInfo> highlights) {
                 ArrayList<Float> weights = new ArrayList<>();
@@ -213,7 +215,7 @@ public class MainActivity extends AppCompatActivity {
                 return weights;
             }
         });
-        ApDataManager.getInstance().addWeightFunction("new WKNN", new ApDataManager.WeightFunction() {
+        ConfigManager.getInstance().addWeightFunction("new WKNN", new WeightFunction() {
             @Override
             public ArrayList<Float> weight(ArrayList<DistanceInfo> highlights) {
                 ArrayList<Float> weights = new ArrayList<>();
@@ -249,6 +251,20 @@ public class MainActivity extends AppCompatActivity {
                 return weights;
             }
         });
+        ConfigManager.getInstance().addWeightFunction("hi", new WeightFunction() {
+            @Override
+            public ArrayList<Float> weight(ArrayList<DistanceInfo> highlights) {
+                ArrayList<Float> weights = new ArrayList<>();
+
+                float weight = 1f / highlights.size();
+
+                for (int i = 0; i < highlights.size(); i++){
+                    weights.add(weight);
+                }
+
+                return weights;
+            }
+        });
 
 //        inputAcceptDifference.addTextChangedListener(new TextWatcher() {
 //            @Override
@@ -272,9 +288,9 @@ public class MainActivity extends AppCompatActivity {
 //        });
 
         apValueModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().apValues));
-        highlightModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ApDataManager.getInstance().getAllHighlightFunctionNames()));
-        displayModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ApDataManager.getInstance().getAllDisplayFunctionNames()));
-        weightModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ApDataManager.getInstance().getAllWeightFunctionNames()));
+        highlightModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().getAllHighlightFunctionNames()));
+        displayModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().getAllDisplayFunctionNames()));
+        weightModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().getAllWeightFunctionNames()));
 
         highlightModeSpinner.setSelection(ApDataManager.getInstance().getCurrentHighlightFunctionIndex());
         displayModeSpinner.setSelection(ApDataManager.getInstance().getCurrentDisplayFunctionIndex());
@@ -401,8 +417,8 @@ public class MainActivity extends AppCompatActivity {
         System.out.println(apValueName + " " + highlightFunctionName + " " + weightFunctionName);
 
         apValueModeSpinner.setSelection(ConfigManager.getInstance().getApValueIndex(apValueName));
-        highlightModeSpinner.setSelection(ApDataManager.getInstance().getHighlightFunctionIndex(highlightFunctionName));
-        weightModeSpinner.setSelection(ApDataManager.getInstance().getWeightFunctionIndex(weightFunctionName));
+        highlightModeSpinner.setSelection(ConfigManager.getInstance().getHighlightFunctionIndex(highlightFunctionName));
+        weightModeSpinner.setSelection(ConfigManager.getInstance().getWeightFunctionIndex(weightFunctionName));
     }
 
     //region Sensor相關

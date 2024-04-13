@@ -110,9 +110,9 @@ public class SettingsView extends LinearLayout {
         config.displayReferencePoint = displayReferencePoint.isChecked();
         config.k = Integer.parseInt(inputK.getText().toString());
         config.setTestPointAtIndex(testPointSpinner.getSelectedItemPosition());
-        apValueView.getAllChecked(config.enableApValues);
-        highlightFunctionView.getAllChecked(config.enableHighlightFunctions);
-        weightFunctionView.getAllChecked(config.enableWeightFunctions);
+        apValueView.setAllChecked(config.enableApValues);
+        highlightFunctionView.setAllChecked(config.enableHighlightFunctions);
+        weightFunctionView.setAllChecked(config.enableWeightFunctions);
 
         ConfigManager.getInstance().invokeConfigChangedListener();
     }

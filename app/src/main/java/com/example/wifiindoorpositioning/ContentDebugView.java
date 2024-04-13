@@ -92,7 +92,11 @@ public class ContentDebugView extends ScrollView {
             @Override
             public void buttonDown() {
                 if (testPointInfo != null){
-                    SystemServiceManager.getInstance().toClipBoard(new TPInfo(testPointInfo));
+                    TestPointInfo output = new TestPointInfo(testPointInfo.testPoint, new ArrayList<>(testPointInfo.values), testPointInfo.results);
+
+                    output.values.sort(ApDistanceInfo.nameComparator);
+
+                    SystemServiceManager.getInstance().toClipBoard(new TPInfo(output));
                 }
             }
         });
@@ -233,8 +237,8 @@ public class ContentDebugView extends ScrollView {
             if (apDistances != null){
                 for (int i = 0; i < apDistances.size(); i++) {
                     ApDistanceInfo apDistance = apDistances.get(i);
-                    float x = testPoint.coordinateX - apDistance.predictCoordinate.x;
-                    float y = testPoint.coordinateY - apDistance.predictCoordinate.y;
+                    float x = testPoint.coordinateX - apDistance.x;
+                    float y = testPoint.coordinateY - apDistance.y;
                     apDistance.distance = (float) Math.sqrt(x * x + y * y);
                 }
 
@@ -325,8 +329,8 @@ public class ContentDebugView extends ScrollView {
 
         for (int i = 0; i < apDistances.size(); i++) {
             ApDistanceInfo apDistance = apDistances.get(i);
-            float x = testPoint.coordinateX - apDistance.predictCoordinate.x;
-            float y = testPoint.coordinateY - apDistance.predictCoordinate.y;
+            float x = testPoint.coordinateX - apDistance.x;
+            float y = testPoint.coordinateY - apDistance.y;
             apDistance.distance = (float) Math.sqrt(x * x + y * y);
         }
 
@@ -435,7 +439,7 @@ public class ContentDebugView extends ScrollView {
                 for (ApDistanceInfo apDistance : testPointInfo.values){
                     if (apValueName.equals(apDistance.apValueName)){
                         testPointApInfo.functions.add(new TestPointFunctionInfo(apDistance.highlightFunctionName,
-                                apDistance.weightFunctionName, apDistance.predictCoordinate, apDistance.distance));
+                                apDistance.weightFunctionName, apDistance.x, apDistance.y, apDistance.distance));
                     }
                 }
 
@@ -459,17 +463,22 @@ public class ContentDebugView extends ScrollView {
     }
 
     public class TestPointFunctionInfo{
-        public String highlightFunctionName, weightFunctionName;
+        public final String[] names = new String[2];
+        public transient String highlightFunctionName, weightFunctionName;
 
-        public ApDataManager.Coordinate coordinate;
+        public transient float x, y;
 
         public float distance;
 
-        public TestPointFunctionInfo(String highlightFunctionName, String weightFunctionName, ApDataManager.Coordinate coordinate, float distance){
+        public TestPointFunctionInfo(String highlightFunctionName, String weightFunctionName, float x, float y, float distance){
             this.highlightFunctionName = highlightFunctionName;
             this.weightFunctionName = weightFunctionName;
-            this.coordinate = coordinate;
+            this.x = x;
+            this.y = y;
             this.distance = distance;
+
+            names[0] = highlightFunctionName;
+            names[1] = weightFunctionName;
         }
     }
 

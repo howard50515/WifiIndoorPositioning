@@ -5,7 +5,7 @@ import com.example.wifiindoorpositioning.datatype.DistanceInfo;
 
 import java.util.ArrayList;
 
-public class DistanceRateHighlightFunction implements ApDataManager.HighlightFunction {
+public class DistanceRateHighlightFunction implements HighlightFunction {
     private Object[] obj = new Object[1];
 
     public DistanceRateHighlightFunction(float rate){
