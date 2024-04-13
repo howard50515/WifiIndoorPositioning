@@ -55,8 +55,6 @@ public class ApDataManager {
 
     private final AssetManager assetManager;
 
-    private final Hashtable<String, DisplayFunction> displayFunctions = new Hashtable<>();
-
     public final static int UNCERTAIN_CHANGED = -1;
     public final static int WIFI_RESULT_CHANGED = 0;
     public final static int AP_VALUE_CHANGED = 1;
@@ -432,7 +430,7 @@ public class ApDataManager {
     }
 
     public void setDisplayFunction(String name){
-        displayFunction = displayFunctions.get(name);
+        displayFunction = ConfigManager.getInstance().displayFunctions.get(name);
 
         displayFunctionName = name;
 
@@ -452,7 +450,7 @@ public class ApDataManager {
     }
 
     public int getCurrentDisplayFunctionIndex(){
-        Enumeration<String> keys = displayFunctions.keys();
+        Enumeration<String> keys = ConfigManager.getInstance().displayFunctions.keys();
 
         int index = 0;
         while (keys.hasMoreElements()){
