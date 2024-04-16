@@ -57,7 +57,7 @@ public class ConfigManager {
     }
 
     public int k = 4;
-    public int referencePointRadius = 20, actualPointRadius = 20, predictPointRadius = 20;
+    public int referencePointRadius = 50, actualPointRadius = 50, predictPointRadius = 50;
     public boolean displayReferencePoint = true;
 
     public String[] apValues;

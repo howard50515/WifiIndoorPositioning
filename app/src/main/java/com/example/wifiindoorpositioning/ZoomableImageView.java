@@ -217,8 +217,6 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
             width = bitmap.getWidth();
             height = bitmap.getHeight();
 
-            System.out.println(width+ "　" + height);
-
             minScale = Math.min(displayMetrics.widthPixels / (width * density),
                     displayMetrics.heightPixels / (height * density));
 
@@ -246,7 +244,7 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
                         break;
                     case MotionEvent.ACTION_UP:
                         mode = Mode.None;
-                        if (Calendar.getInstance().getTimeInMillis() - time <= 100) {
+                        if (Calendar.getInstance().getTimeInMillis() - time <= 300) {
                             setFingerPointWithScreenPoint(event.getX(), event.getY());
                         }
                         changeMatrix.set(matrix);
