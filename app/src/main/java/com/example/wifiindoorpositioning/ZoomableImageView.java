@@ -217,6 +217,8 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
             width = bitmap.getWidth();
             height = bitmap.getHeight();
 
+            System.out.println(width+ "　" + height);
+
             minScale = Math.min(displayMetrics.widthPixels / (width * density),
                     displayMetrics.heightPixels / (height * density));
 
@@ -327,6 +329,8 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
             public void onGlobalLayout() {
                 displayHeight = getHeight();
 
+                System.out.println(displayHeight);
+
                 ZoomableImageView.this.getViewTreeObserver().removeOnGlobalLayoutListener(this);
                 if (scrollView == null){
                     ViewParent temp = getParent();
@@ -370,11 +374,17 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
 
         ConfigManager configManager = ConfigManager.getInstance();
 
+        // float scaleX = 2812 / 1291f;
+        // float scaleY = 2140 / 973f;
+
+        float scaleX = 1f;
+        float scaleY = 1f;
+
         float pointRadius = configManager.referencePointRadius * coordinateDensityScalar * values[0];
         if (configManager.displayReferencePoint && drawPoints != null){
             for (ReferencePoint rp : drawPoints){
-                float screenX = rp.coordinateX * coordinateDensityScalar * values[0] + values[2];
-                float screenY = rp.coordinateY * coordinateDensityScalar * values[4] + values[5];
+                float screenX = rp.coordinateX * scaleX * coordinateDensityScalar * values[0] + values[2];
+                float screenY = rp.coordinateY * scaleY * coordinateDensityScalar * values[4] + values[5];
 
                 if (highlights == null){
                     canvas.drawCircle(screenX, screenY, pointRadius, pointsPaint);
@@ -393,8 +403,8 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
             }
         }
 
-        float x = imagePoint.x * coordinateDensityScalar * values[0] + values[2];
-        float y = imagePoint.y * coordinateDensityScalar * values[4] + values[5];
+        float x = imagePoint.x * scaleX * coordinateDensityScalar * values[0] + values[2];
+        float y = imagePoint.y * scaleY * coordinateDensityScalar * values[4] + values[5];
 
         gradient.setLocalMatrix(matrix);
 
@@ -405,8 +415,8 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
         canvas.drawColor(Color.TRANSPARENT);
         canvas.drawCircle(x, y, configManager.predictPointRadius * coordinateDensityScalar * values[0], circlePaint);
 
-        float fingerX = fingerPoint.x * coordinateDensityScalar * values[0] + values[2];
-        float fingerY = fingerPoint.y * coordinateDensityScalar * values[4] + values[5];
+        float fingerX = fingerPoint.x * scaleX * coordinateDensityScalar * values[0] + values[2];
+        float fingerY = fingerPoint.y * scaleY * coordinateDensityScalar * values[4] + values[5];
 
         canvas.drawCircle(fingerX, fingerY, configManager.actualPointRadius * coordinateDensityScalar * values[0], fingerPaint);
     }

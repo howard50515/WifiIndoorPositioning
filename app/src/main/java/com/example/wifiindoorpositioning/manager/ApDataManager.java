@@ -12,6 +12,7 @@ import com.example.wifiindoorpositioning.datatype.ReferencePoint;
 import com.example.wifiindoorpositioning.datatype.WifiResult;
 
 import com.example.wifiindoorpositioning.function.DisplayFunction;
+import com.example.wifiindoorpositioning.function.FirstKDistanceHighlightFunction;
 import com.example.wifiindoorpositioning.function.HighlightFunction;
 import com.example.wifiindoorpositioning.function.WeightFunction;
 
@@ -67,13 +68,7 @@ public class ApDataManager {
     private ApDataManager(Context context) {
         assetManager = context.getAssets();
 
-        ConfigManager.getInstance().addHighlightFunction("距離排序k個", (distances, k) -> {
-            ArrayList<DistanceInfo> copy = new ArrayList<>(distances);
-
-            copy.sort(DistanceInfo.distanceComparable);
-
-            return new ArrayList<>(copy.subList(0, k));
-        });
+        ConfigManager.getInstance().addHighlightFunction("距離排序k個", new FirstKDistanceHighlightFunction(), false);
 
         ConfigManager.getInstance().addDisplayFunction("按照距離排序", distances -> {
             ArrayList<DistanceInfo> copy = new ArrayList<>(distances);

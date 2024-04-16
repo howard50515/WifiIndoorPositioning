@@ -46,13 +46,15 @@ public class FunctionView extends LinearLayout {
         }
     }
 
-    public void setFunctions(Enumeration<String> names, Dictionary<String, Boolean> checks){
+    public void setFunctions(ArrayList<String> names, Dictionary<String, Boolean> checks){
         hideAllView();
 
-        int i = 0;
-        while (names.hasMoreElements()){
-            String name = names.nextElement();
+        ArrayList<String> copy = new ArrayList<>(names);
 
+        copy.sort(String::compareTo);
+
+        int i = 0;
+        for (String name : copy){
             if (checkBoxes.size() <= i) {
                 CheckBox checkBox = new CheckBox(context);
                 checkBox.setTextAlignment(TEXT_ALIGNMENT_CENTER);

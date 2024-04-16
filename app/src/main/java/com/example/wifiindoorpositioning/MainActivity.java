@@ -14,6 +14,7 @@ import android.widget.TextView;
 
 import com.example.wifiindoorpositioning.datatype.DistanceInfo;
 import com.example.wifiindoorpositioning.function.DistanceRateHighlightFunction;
+import com.example.wifiindoorpositioning.function.FirstKDistanceHighlightFunction;
 import com.example.wifiindoorpositioning.function.HighlightFunction;
 import com.example.wifiindoorpositioning.function.WeightFunction;
 import com.example.wifiindoorpositioning.manager.ApDataManager;
@@ -60,6 +61,9 @@ public class MainActivity extends AppCompatActivity {
         contentView = findViewById(R.id.contentView);
         settingsView = new SettingsView(this);
 
+        ConfigManager.getInstance().addHighlightFunction("距離排序3個", new FirstKDistanceHighlightFunction(3));
+        ConfigManager.getInstance().addHighlightFunction("距離排序4個", new FirstKDistanceHighlightFunction(4));
+        ConfigManager.getInstance().addHighlightFunction("距離排序5個", new FirstKDistanceHighlightFunction(5));
         ConfigManager.getInstance().addHighlightFunction("距離前20%", new DistanceRateHighlightFunction(0.2f));
         ConfigManager.getInstance().addHighlightFunction("距離前30%", new DistanceRateHighlightFunction(0.3f));
         ConfigManager.getInstance().addHighlightFunction("距離前40%", new DistanceRateHighlightFunction(0.4f));
@@ -245,20 +249,6 @@ public class MainActivity extends AppCompatActivity {
                 for (int i = 0; i < highlights.size(); i++){
                     DistanceInfo distance = highlights.get(i);
                     float weight = (threshold - distance.distance) / distance_sum;
-                    weights.add(weight);
-                }
-
-                return weights;
-            }
-        });
-        ConfigManager.getInstance().addWeightFunction("hi", new WeightFunction() {
-            @Override
-            public ArrayList<Float> weight(ArrayList<DistanceInfo> highlights) {
-                ArrayList<Float> weights = new ArrayList<>();
-
-                float weight = 1f / highlights.size();
-
-                for (int i = 0; i < highlights.size(); i++){
                     weights.add(weight);
                 }
 

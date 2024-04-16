@@ -113,6 +113,9 @@ public class ContentDebugView extends ScrollView {
     public void setTestPoint(TestPoint testPoint){
         this.testPoint = testPoint;
 
+        if (testPointInfo != null)
+            testPointInfo.testPoint = testPoint;
+
         txtTestPoint.setText(String.format("%s\n(%.2f, %.2f)", testPoint.name, testPoint.coordinateX, testPoint.coordinateY));
 
         refresh(ApDataManager.TEST_POINT_CHANGED);
@@ -247,7 +250,7 @@ public class ContentDebugView extends ScrollView {
 
                 System.out.println(apDistances.size());
 
-                testPointInfo = new TestPointInfo(ConfigManager.getInstance().testPoint, apDistances, ApDataManager.getInstance().originalResults);
+                testPointInfo = new TestPointInfo(testPoint, apDistances, ApDataManager.getInstance().originalResults);
             }
 
             activity.runOnUiThread(() ->{

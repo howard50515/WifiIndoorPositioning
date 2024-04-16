@@ -88,7 +88,7 @@ public class SettingsView extends LinearLayout {
         if (isActivate) closeView();
 
         setView();
-        RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT);
         activity.addContentView(this, params);
         isActivate = true;
     }
@@ -129,8 +129,8 @@ public class SettingsView extends LinearLayout {
         testPointSpinner.setSelection(ConfigManager.getInstance().getCurrentTestPointIndex());
         txtTestPointCoordinate.setText(String.format("(%.2f, %.2f)", config.testPoint.coordinateX, config.testPoint.coordinateY));
         apValueView.setFunctions(config.apValues, config.enableApValues);
-        highlightFunctionView.setFunctions(config.highlightFunctions.keys(), config.enableHighlightFunctions);
-        weightFunctionView.setFunctions(config.weightFunctions.keys(), config.enableWeightFunctions);
+        highlightFunctionView.setFunctions(config.getAllHighlightFunctionNames(), config.enableHighlightFunctions);
+        weightFunctionView.setFunctions(config.getAllWeightFunctionNames(), config.enableWeightFunctions);
     }
 
     private void resetView(){
