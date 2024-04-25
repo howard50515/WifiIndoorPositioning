@@ -5,8 +5,11 @@ import android.content.Context;
 import android.content.res.AssetManager;
 
 import com.example.wifiindoorpositioning.R;
+import com.example.wifiindoorpositioning.datatype.ReferencePoint;
 import com.example.wifiindoorpositioning.datatype.TestPoint;
 
+import com.example.wifiindoorpositioning.datatype.TestPointInfo;
+import com.example.wifiindoorpositioning.datatype.WifiResult;
 import com.example.wifiindoorpositioning.function.DisplayFunction;
 import com.example.wifiindoorpositioning.function.HighlightFunction;
 import com.example.wifiindoorpositioning.function.WeightFunction;
@@ -16,9 +19,10 @@ import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Dictionary;
-import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.LinkedHashMap;
+import java.util.Set;
 
 public class ConfigManager {
     private static ConfigManager instance;
@@ -35,12 +39,18 @@ public class ConfigManager {
     }
 
     private ConfigManager(Context context){
-        AssetManager assetManager = context.getAssets();
+        assetManager = context.getAssets();
 
         try{
             apValues = assetManager.list(ApDataManager.apValuesDirectoryName);
         } catch (IOException ex){
-            throw new RuntimeException();
+            throw new RuntimeException("Fail to Load Ap Values");
+        }
+
+        try{
+            resultHistories = assetManager.list(resultHistoriesDirectoryName);
+        } catch (IOException ex){
+            throw new RuntimeException("Fail to Load Results Histories");
         }
 
         for (String name : apValues){
@@ -52,24 +62,51 @@ public class ConfigManager {
                 new TypeToken<Hashtable<String, ApDataManager.Coordinate>>(){}.getType());
         testPoints = new ArrayList<>();
         testPointsCoordinate.forEach((name, coordinate) -> testPoints.add(new TestPoint(name, coordinate)));
-
-        setTestPointAtIndex(0);
     }
+
+    private final AssetManager assetManager;
+
+    public final static String resultHistoriesDirectoryName = "results_history";
 
     public int k = 4;
     public int referencePointRadius = 50, actualPointRadius = 50, predictPointRadius = 50;
     public boolean displayReferencePoint = true;
 
+    public String[] resultHistories;
     public String[] apValues;
-    public Dictionary<String, Boolean> enableApValues = new Hashtable<>();
-    public Dictionary<String, DisplayFunction> displayFunctions = new Hashtable<>();
-    public Dictionary<String, HighlightFunction> highlightFunctions = new Hashtable<>();
-    public Dictionary<String, Boolean> enableHighlightFunctions = new Hashtable<>();
-    public Dictionary<String, WeightFunction> weightFunctions = new Hashtable<>();
-    public Dictionary<String, Boolean> enableWeightFunctions = new Hashtable<>();
-    public TestPoint testPoint;
+    public HashMap<String, Boolean> enableApValues = new LinkedHashMap<>();
+    public HashMap<String, DisplayFunction> displayFunctions = new LinkedHashMap<>();
+    public HashMap<String, HighlightFunction> highlightFunctions = new LinkedHashMap<>();
+    public HashMap<String, Boolean> enableHighlightFunctions = new LinkedHashMap<>();
+    public HashMap<String, WeightFunction> weightFunctions = new LinkedHashMap<>();
+    public HashMap<String, Boolean> enableWeightFunctions = new LinkedHashMap<>();
 
     private final ArrayList<TestPoint> testPoints;
+
+    public String[] getResultHistoriesName(){
+        String[] names = new String[resultHistories.length];
+
+        for (int i = 0; i < resultHistories.length; i++){
+            names[i] = resultHistories[i].replace(".txt", "");
+        }
+
+        return names;
+    }
+
+    public TestPointInfo getResultHistory(int index){
+        try{
+            TestPointInfo testPointInfo = new Gson().fromJson(ApDataManager.getValue(
+                    assetManager.open(resultHistoriesDirectoryName + "/" + resultHistories[index])), new TypeToken<TestPointInfo>(){}.getType());
+
+            for (WifiResult result : testPointInfo.results){
+                result.applyApId();
+            }
+
+            return testPointInfo;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     public int getApValueIndex(String name){
         for (int i = 0; i < apValues.length; i++){
@@ -85,16 +122,12 @@ public class ConfigManager {
         ArrayList<String> names = new ArrayList<>();
 
         for (String name : apValues){
-            if (enableApValues.get(name)){
+            if (Boolean.TRUE.equals(enableApValues.get(name))){
                 names.add(name);
             }
         }
 
         return names;
-    }
-
-    public void setTestPointAtIndex(int index) {
-        this.testPoint = testPoints.get(index);
     }
 
     public TestPoint getTestPointAtIndex(int index) {
@@ -112,33 +145,16 @@ public class ConfigManager {
         return names;
     }
 
-    public int getCurrentTestPointIndex(){
-        for (int i = 0; i < testPoints.size(); i++){
-            if (testPoint.equals(testPoints.get(i))){
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
     public ArrayList<String> getAllDisplayFunctionNames(){
-        Enumeration<String> keys = displayFunctions.keys();
-
-        ArrayList<String> names = new ArrayList<>();
-        while (keys.hasMoreElements()){
-            names.add(keys.nextElement());
-        }
-
-        return names;
+        return new ArrayList<>(displayFunctions.keySet());
     }
 
     public int getHighlightFunctionIndex(String name){
-        Enumeration<String> keys = ConfigManager.getInstance().highlightFunctions.keys();
+        Set<String> keys = highlightFunctions.keySet();
 
         int index = 0;
-        while (keys.hasMoreElements()){
-            if (name.equals(keys.nextElement())){
+        for (String key : keys){
+            if (name.equals(key)){
                 return index;
             }
 
@@ -149,25 +165,16 @@ public class ConfigManager {
     }
 
     public ArrayList<String> getAllHighlightFunctionNames(){
-        Enumeration<String> keys = ConfigManager.getInstance().highlightFunctions.keys();
-
-        ArrayList<String> names = new ArrayList<>();
-        while (keys.hasMoreElements()){
-            names.add(keys.nextElement());
-        }
-
-        return names;
+        return new ArrayList<>(highlightFunctions.keySet());
     }
 
     public ArrayList<String> getAllEnableHighlightFunctionNames(){
         ArrayList<String> names = new ArrayList<>();
 
-        Enumeration<String> keys = highlightFunctions.keys();
+        Set<String> keys = highlightFunctions.keySet();
 
-        while (keys.hasMoreElements()){
-            String name = keys.nextElement();
-
-            if (enableHighlightFunctions.get(name)){
+        for (String name : keys){
+            if (Boolean.TRUE.equals(enableHighlightFunctions.get(name))){
                 names.add(name);
             }
         }
@@ -176,11 +183,11 @@ public class ConfigManager {
     }
 
     public int getWeightFunctionIndex(String name){
-        Enumeration<String> keys = ConfigManager.getInstance().weightFunctions.keys();
+        Set<String> keys = weightFunctions.keySet();
 
         int index = 0;
-        while (keys.hasMoreElements()){
-            if (name.equals(keys.nextElement())){
+        for (String key : keys){
+            if (name.equals(key)){
                 return index;
             }
 
@@ -191,25 +198,16 @@ public class ConfigManager {
     }
 
     public ArrayList<String> getAllWeightFunctionNames(){
-        Enumeration<String> keys = ConfigManager.getInstance().weightFunctions.keys();
-
-        ArrayList<String> names = new ArrayList<>();
-        while (keys.hasMoreElements()){
-            names.add(keys.nextElement());
-        }
-
-        return names;
+        return new ArrayList<>(weightFunctions.keySet());
     }
 
     public ArrayList<String> getAllEnableWeightFunctionNames(){
         ArrayList<String> names = new ArrayList<>();
 
-        Enumeration<String> keys = weightFunctions.keys();
+        Set<String> keys = weightFunctions.keySet();
 
-        while (keys.hasMoreElements()){
-            String name = keys.nextElement();
-
-            if (enableWeightFunctions.get(name)){
+        for (String name : keys){
+            if (Boolean.TRUE.equals(enableWeightFunctions.get(name))){
                 names.add(name);
             }
         }

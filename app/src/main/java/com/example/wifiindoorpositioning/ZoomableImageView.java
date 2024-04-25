@@ -57,7 +57,7 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
 
         canvasSettings();
 
-        setFingerPoint(ConfigManager.getInstance().testPoint.coordinateX, ConfigManager.getInstance().testPoint.coordinateY);
+        // setFingerPoint(ConfigManager.getInstance().testPoint.coordinateX, ConfigManager.getInstance().testPoint.coordinateY);
 
         ApDataManager.getInstance().registerOnResultChangedListener(new ApDataManager.OnResultChangedListener() {
             @Override
@@ -67,11 +67,11 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
                 setHighlights(ApDataManager.getInstance().highlightDistances);
             }
         });
-        ConfigManager.getInstance().registerOnConfigChangedListener(() -> {
-            TestPoint testPoint = ConfigManager.getInstance().testPoint;
-
-            setFingerPoint(testPoint.coordinateX, testPoint.coordinateY);
-        });
+//        ConfigManager.getInstance().registerOnConfigChangedListener(() -> {
+//            TestPoint testPoint = ConfigManager.getInstance().testPoint;
+//
+//            setFingerPoint(testPoint.coordinateX, testPoint.coordinateY);
+//        });
     }
 
     public void screenPointToImagePoint(PointF p, float pointX, float pointY){
@@ -148,16 +148,16 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
         return fingerPoint;
     }
 
-    private void setFingerPoint(float x, float y){
+    public void setFingerPoint(float x, float y){
         fingerPoint.set(x, y);
 
-        if (fingerPointChangedListener != null){
-            fingerPointChangedListener.pointChange(fingerPoint.x, fingerPoint.y);
-        }
+//        if (fingerPointChangedListener != null){
+//            fingerPointChangedListener.pointChange(fingerPoint.x, fingerPoint.y);
+//        }
 
         postInvalidate();
     }
-    private void setFingerPointWithScreenPoint(float x, float y){
+    public void setFingerPointWithScreenPoint(float x, float y){
         screenPointToImagePoint(fingerPoint, x, y);
 
         if (fingerPointChangedListener != null){
@@ -169,7 +169,7 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
     private final static float arcRadius = 200;
     private RadialGradient gradient;
     private void canvasSettings(){
-        setBackgroundColor(Color.valueOf(0.3f, 0.3f, 0.3f, 0.3f).toArgb());
+        setBackgroundColor(Color.valueOf(0.8f, 0.8f, 0.8f, 0.3f).toArgb());
 
         circlePaint = new Paint();
         circlePaint.setColor(Color.BLUE);
@@ -274,7 +274,7 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
                                     x = 50 - changeMatrixValues[2];
                                 }
                                 if (diffY < 0){
-                                    y = -changeMatrixValues[5] + (displayHeight - (height * density * changeMatrixValues[4])) / 2f;;
+                                    y = -changeMatrixValues[5] + (displayHeight - (height * density * changeMatrixValues[4])) / 2f;
                                 }
                                 else if (diffY + changeY < -50){
                                     y = -diffY - changeMatrixValues[5] - 50;
@@ -327,8 +327,6 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
             public void onGlobalLayout() {
                 displayHeight = getHeight();
 
-                System.out.println(displayHeight);
-
                 ZoomableImageView.this.getViewTreeObserver().removeOnGlobalLayoutListener(this);
                 if (scrollView == null){
                     ViewParent temp = getParent();
@@ -371,9 +369,6 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
         matrix.getValues(values);
 
         ConfigManager configManager = ConfigManager.getInstance();
-
-        // float scaleX = 2812 / 1291f;
-        // float scaleY = 2140 / 973f;
 
         float scaleX = 1f;
         float scaleY = 1f;

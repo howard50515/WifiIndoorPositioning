@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.res.AssetManager;
 
+import com.example.wifiindoorpositioning.MainActivity;
 import com.example.wifiindoorpositioning.R;
 import com.example.wifiindoorpositioning.datatype.ApDistanceInfo;
 import com.example.wifiindoorpositioning.datatype.DistanceInfo;
@@ -25,13 +26,14 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Dictionary;
-import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.Set;
 
 public class ApDataManager {
     private static ApDataManager instance;
 
-    public static void createInstance(Activity context){
+    public static void createInstance(MainActivity context){
         if (instance != null)
             return;
 
@@ -56,6 +58,8 @@ public class ApDataManager {
 
     private final AssetManager assetManager;
 
+    private final MainActivity activity;
+
     public final static int UNCERTAIN_CHANGED = -1;
     public final static int WIFI_RESULT_CHANGED = 0;
     public final static int AP_VALUE_CHANGED = 1;
@@ -65,7 +69,9 @@ public class ApDataManager {
     public final static int TEST_POINT_CHANGED = 5;
 
     @SuppressLint("DefaultLocale")
-    private ApDataManager(Context context) {
+    private ApDataManager(MainActivity context) {
+        this.activity = context;
+
         assetManager = context.getAssets();
 
         ConfigManager.getInstance().addHighlightFunction("距離排序k個", new FirstKDistanceHighlightFunction(), false);
@@ -178,8 +184,8 @@ public class ApDataManager {
         ArrayList<ApDistanceInfo> apDistances = new ArrayList<>();
 
         ConfigManager configManager = ConfigManager.getInstance();
-        Dictionary<String, HighlightFunction> highlightFunctions = configManager.highlightFunctions;
-        Dictionary<String, WeightFunction> weightFunctions = configManager.weightFunctions;
+        HashMap<String, HighlightFunction> highlightFunctions = configManager.highlightFunctions;
+        HashMap<String, WeightFunction> weightFunctions = configManager.weightFunctions;
         ArrayList<String> apValueNames = configManager.getAllEnableApValueNames();
         ArrayList<String> highlightNames = configManager.getAllEnableHighlightFunctionNames();
         ArrayList<String> weightNames = configManager.getAllEnableWeightFunctionNames();
@@ -283,7 +289,26 @@ public class ApDataManager {
                 sum += diff * diff;
             }
 
-            distances.add(new DistanceInfo(rp.name, (float)Math.sqrt(sum), rp.coordinateX, rp.coordinateY, pastFoundNum, notFoundNum, pastNotFoundNum, foundNum));
+            DistanceInfo distance = new DistanceInfo(rp.name, (float)Math.sqrt(sum), rp.coordinateX, rp.coordinateY, pastFoundNum, notFoundNum, pastNotFoundNum, foundNum);
+
+            for (ReferencePoint other : rps){
+                if (!other.equals(rp)){
+                    int overlapCount = 0;
+
+                    for (int j = 0; j < rp.vector.size(); j++){
+                        if (rp.vector.get(j) == -100 && ssids.get(j) != -100 &&
+                                other.vector.get(j) == -100){
+                            overlapCount++;
+                        }
+                    }
+
+                    distance.newSameOverlapPercent.add(new DistanceInfo.Overlap(other.name, overlapCount));
+                }
+            }
+
+            distance.newSameOverlapPercent.sort((lhs, rhs) -> -Integer.compare(lhs.count, rhs.count));
+
+            distances.add(distance);
         }
 
         return distances;
@@ -292,15 +317,19 @@ public class ApDataManager {
     public void calculateResult(int changeCode){
         if (originalResults == null) return;
 
-        this.results = getSelectedApResults(originalResults, accessPoints);
+        //new Thread(() ->{
+            this.results = getSelectedApResults(originalResults, accessPoints);
 
-        ArrayList<Float> ssids = getVector(results, accessPoints);
+            ArrayList<Float> ssids = getVector(results, accessPoints);
 
-        ArrayList<DistanceInfo> distances = getDistances(fingerprint, ssids);
+            ArrayList<DistanceInfo> distances = getDistances(fingerprint, ssids);
 
-        this.originalDistances = new ArrayList<>(distances);
+            this.originalDistances = new ArrayList<>(distances);
 
-        refresh(changeCode);
+            //activity.runOnUiThread(() ->{
+                refresh(changeCode);
+            //});
+        //}).start();
     }
 
     public void setResult(ArrayList<WifiResult> results){
@@ -353,8 +382,6 @@ public class ApDataManager {
 
         for (int i = 0; i < highlights.size(); i++){
             DistanceInfo info = highlights.get(i);
-
-            if (Float.isNaN(info.weight)) System.out.println(highlights.size() + " " + info.distance);
 
             predict.x += info.weight * info.coordinateX;
             predict.y += info.weight * info.coordinateY;
@@ -445,11 +472,11 @@ public class ApDataManager {
     }
 
     public int getCurrentDisplayFunctionIndex(){
-        Enumeration<String> keys = ConfigManager.getInstance().displayFunctions.keys();
+        Set<String> keys = ConfigManager.getInstance().displayFunctions.keySet();
 
         int index = 0;
-        while (keys.hasMoreElements()){
-            if (displayFunctionName.equals(keys.nextElement())){
+        for (String key : keys){
+            if (displayFunctionName.equals(key)){
                 return index;
             }
 

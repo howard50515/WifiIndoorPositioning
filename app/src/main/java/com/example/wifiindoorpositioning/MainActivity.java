@@ -13,6 +13,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.example.wifiindoorpositioning.datatype.DistanceInfo;
+import com.example.wifiindoorpositioning.datatype.TestPointInfo;
 import com.example.wifiindoorpositioning.function.DistanceRateHighlightFunction;
 import com.example.wifiindoorpositioning.function.FirstKDistanceHighlightFunction;
 import com.example.wifiindoorpositioning.function.HighlightFunction;
@@ -28,7 +29,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView txtOrientation, txtStatus, txtDistance;
     // private EditText inputAcceptDifference;
     private ZoomableImageView mapImage;
-    private Spinner debugModeSpinner, apValueModeSpinner, highlightModeSpinner, displayModeSpinner, weightModeSpinner;
+    private Spinner debugModeSpinner, apValueModeSpinner, highlightModeSpinner, displayModeSpinner, weightModeSpinner, resultHistoriesSpinner;
     private ContentDebugView contentView;
     private HighlightButton btScan, btSettings;
     private SettingsView settingsView;
@@ -58,6 +59,7 @@ public class MainActivity extends AppCompatActivity {
         highlightModeSpinner = findViewById(R.id.highlightModeSpinner);
         displayModeSpinner = findViewById(R.id.displayModeSpinner);
         weightModeSpinner = findViewById(R.id.weightModeSpinner);
+        resultHistoriesSpinner = findViewById(R.id.resultHistoriesSpinner);
         contentView = findViewById(R.id.contentView);
         settingsView = new SettingsView(this);
 
@@ -278,6 +280,7 @@ public class MainActivity extends AppCompatActivity {
 //        });
 
         apValueModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().apValues));
+        resultHistoriesSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().getResultHistoriesName()));
         highlightModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().getAllHighlightFunctionNames()));
         displayModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().getAllDisplayFunctionNames()));
         weightModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().getAllWeightFunctionNames()));
@@ -290,6 +293,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
                 ApDataManager.getInstance().loadApValueAtIndex(apValueModeSpinner.getSelectedItemPosition());
+                mapImage.setReferencePoints(ApDataManager.getInstance().fingerprint);
             }
 
             @Override
@@ -330,8 +334,23 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
+        resultHistoriesSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                TestPointInfo testPointInfo = ConfigManager.getInstance().getResultHistory(i);
 
-        contentView.setMainActivity(this);
+                contentView.setTestPoint(testPointInfo.testPoint);
+                // contentView.setTestPoint(testPointInfo.testPoint);
+
+                ApDataManager.getInstance().setResult(testPointInfo.results);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {
+
+            }
+        });
+
         mapImage.setReferencePoints(ApDataManager.getInstance().fingerprint);
         mapImage.setNorthOffset(180);
         mapImage.setOnImagePointChangedListener(new ZoomableImageView.OnImagePointChangedListener() {
@@ -354,6 +373,14 @@ public class MainActivity extends AppCompatActivity {
                 txtDistance.setText(String.format("%.2f, (%.2f, %.2f)", Math.sqrt(diffX * diffX + diffY * diffY), x, y));
 
                 contentView.setTestPoint(x, y);
+            }
+        });
+
+        contentView.setMainActivity(this);
+        contentView.setOnTestPointChangedListener(new ContentDebugView.OnTestPointChangedListener() {
+            @Override
+            public void pointChange(float x, float y) {
+                mapImage.setFingerPoint(x, y);
             }
         });
 

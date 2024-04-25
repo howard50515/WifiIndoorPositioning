@@ -25,6 +25,7 @@ import com.example.wifiindoorpositioning.manager.SystemServiceManager;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Objects;
 
 public class ContentDebugView extends ScrollView {
     private MainActivity activity;
@@ -40,6 +41,8 @@ public class ContentDebugView extends ScrollView {
     private TestPoint testPoint;
 
     private TestPointInfo testPointInfo;
+
+    private final int maxDisplayCount = 30;
 
     public ContentDebugView(Context context) {
         super(context);
@@ -77,9 +80,9 @@ public class ContentDebugView extends ScrollView {
         testPointSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                ConfigManager.getInstance().setTestPointAtIndex(testPointSpinner.getSelectedItemPosition());
+                TestPoint testPoint = ConfigManager.getInstance().getTestPointAtIndex(testPointSpinner.getSelectedItemPosition());
 
-                setTestPoint(ConfigManager.getInstance().testPoint);
+                setTestPoint(testPoint);
             }
 
             @Override
@@ -119,6 +122,8 @@ public class ContentDebugView extends ScrollView {
         txtTestPoint.setText(String.format("%s\n(%.2f, %.2f)", testPoint.name, testPoint.coordinateX, testPoint.coordinateY));
 
         refresh(ApDataManager.TEST_POINT_CHANGED);
+
+        if (listener != null) listener.pointChange(testPoint.coordinateX, testPoint.coordinateY);
     }
 
     public void setTestPoint(float x, float y){
@@ -245,7 +250,6 @@ public class ContentDebugView extends ScrollView {
                     apDistance.distance = (float) Math.sqrt(x * x + y * y);
                 }
 
-
                 apDistances.sort(ApDistanceInfo.distanceComparator);
 
                 System.out.println(apDistances.size());
@@ -260,58 +264,7 @@ public class ContentDebugView extends ScrollView {
 
                 txtWait.setVisibility(GONE);
 
-                int displayCount = Math.min(apDistances.size(), 50);
-
-                for (int i = 0; i < displayCount; i++){
-                    ApDistanceInfo apDistance = apDistances.get(i);
-
-                    InfoDisplayView displayView;
-
-                    if (displayViews.size() <= i) {
-                        displayView = new InfoDisplayView(context);
-                        displayView.setOnTouchListener(new OnTouchListener() {
-                            private boolean isOutside;
-
-                            @Override
-                            public boolean onTouch(View view, MotionEvent motionEvent) {
-                                int action = motionEvent.getAction();
-                                switch (action) {
-                                    case MotionEvent.ACTION_DOWN:
-                                        isOutside = false;
-//                                    displayView.setBackgroundResource(R.drawable.background_rectangle_focus);
-//                                    if (scrollView != null)
-//                                        scrollView.requestDisallowInterceptTouchEvent(true);
-                                        break;
-                                    case MotionEvent.ACTION_MOVE:
-                                        isOutside = motionEvent.getX() > displayView.getWidth() || motionEvent.getX() < 0 ||
-                                                motionEvent.getY() > displayView.getHeight() || motionEvent.getY() < 0;
-//                                    if (!isOutside)
-//                                        displayView.setBackgroundResource(R.drawable.background_rectangle_focus);
-//                                    else
-//                                        displayView.setBackgroundResource(R.drawable.background_rectangle_transparent_unfocus);
-                                        break;
-                                    case MotionEvent.ACTION_UP:
-//                                    displayView.setBackgroundResource(R.drawable.background_rectangle_transparent_unfocus);
-//                                    if (scrollView != null)
-//                                        scrollView.requestDisallowInterceptTouchEvent(false);
-                                        if (!isOutside) {
-                                            activity.setApValueFunctions(displayView.apDistance.apValueName, displayView.apDistance.highlightFunctionName, displayView.apDistance.weightFunctionName);
-                                        }
-                                        break;
-                                }
-
-                                return true;
-                            }
-                        });
-                        displayViews.add(displayView);
-                        body.addView(displayView);
-                    } else {
-                        displayView = displayViews.get(i);
-                        displayViews.get(i).setVisibility(VISIBLE);
-                    }
-
-                    displayView.setInfo(apDistance);
-                }
+                display(apDistances);
             });
         });
 
@@ -320,24 +273,39 @@ public class ContentDebugView extends ScrollView {
 
     @SuppressLint("ClickableViewAccessibility")
     public void recalculateApDistanceInfo(){
-        ArrayList<ApDistanceInfo> apDistances;
-
         if (testPointInfo == null) return;
 
-        apDistances = testPointInfo.values;
+        hideAllInfo();
 
-        txtWait.setVisibility(GONE);
+//        txtWait.setText("計算中...");
+//        txtWait.setVisibility(VISIBLE);
+        apDistanceInfoControlPanel.setVisibility(VISIBLE);
 
-        int displayCount = Math.min(apDistances.size(), 50);
+        //new Thread(()->{
+            ArrayList<ApDistanceInfo> apDistances = new ArrayList<>(testPointInfo.values);
 
-        for (int i = 0; i < apDistances.size(); i++) {
-            ApDistanceInfo apDistance = apDistances.get(i);
-            float x = testPoint.coordinateX - apDistance.x;
-            float y = testPoint.coordinateY - apDistance.y;
-            apDistance.distance = (float) Math.sqrt(x * x + y * y);
-        }
+            for (int i = 0; i < apDistances.size(); i++) {
+                ApDistanceInfo apDistance = apDistances.get(i);
+                float x = testPoint.coordinateX - apDistance.x;
+                float y = testPoint.coordinateY - apDistance.y;
+                apDistance.distance = (float) Math.sqrt(x * x + y * y);
+            }
 
-        apDistances.sort(ApDistanceInfo.distanceComparator);
+            apDistances.sort(ApDistanceInfo.distanceComparator);
+
+            //activity.runOnUiThread(()->{
+                // txtWait.setVisibility(GONE);
+
+                display(apDistances);
+            //});
+        //}).start();
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private void display(ArrayList<ApDistanceInfo> apDistances){
+        /// if (!mode.equals("存取點距離")) return;
+
+        int displayCount = Math.min(apDistances.size(), maxDisplayCount);
 
         for (int i = 0; i < displayCount; i++){
             ApDistanceInfo apDistance = apDistances.get(i);
@@ -372,7 +340,8 @@ public class ContentDebugView extends ScrollView {
 //                                    if (scrollView != null)
 //                                        scrollView.requestDisallowInterceptTouchEvent(false);
                                 if (!isOutside) {
-                                    activity.setApValueFunctions(displayView.apDistance.apValueName, displayView.apDistance.highlightFunctionName, displayView.apDistance.weightFunctionName);
+                                    if (mode.equals("存取點距離"))
+                                        activity.setApValueFunctions(displayView.apDistance.apValueName, displayView.apDistance.highlightFunctionName, displayView.apDistance.weightFunctionName);
                                 }
                                 break;
                         }
@@ -391,34 +360,15 @@ public class ContentDebugView extends ScrollView {
         }
     }
 
-//    private ScrollView scrollView;
-//
-//    private void getScrollView(){
-//        ViewTreeObserver observer = this.getViewTreeObserver();
-//        observer.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
-//            @Override
-//            public void onGlobalLayout() {
-//                ContentDebugView.this.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-//                if (scrollView == null){
-//                    ViewParent temp = getParent();
-//                    ViewGroup parent = null;
-//                    if (temp instanceof ViewGroup)
-//                        parent = (ViewGroup) temp;
-//                    while (parent != null){
-//                        if (parent instanceof ScrollView){
-//                            scrollView = (ScrollView) parent;
-//                            break;
-//                        }
-//                        temp = parent.getParent();
-//                        if (temp instanceof ViewGroup)
-//                            parent = (ViewGroup) temp;
-//                        else
-//                            parent = null;
-//                    }
-//                }
-//            }
-//        });
-//    }
+    private OnTestPointChangedListener listener;
+
+    public void setOnTestPointChangedListener(OnTestPointChangedListener listener){
+        this.listener = listener;
+    }
+
+    public interface OnTestPointChangedListener{
+        void pointChange(float x, float y);
+    }
 
     public class TPInfo{
         // 測試點資訊

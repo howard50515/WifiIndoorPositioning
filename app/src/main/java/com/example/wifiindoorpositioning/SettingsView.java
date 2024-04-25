@@ -19,12 +19,10 @@ import com.example.wifiindoorpositioning.manager.ConfigManager;
 
 public class SettingsView extends LinearLayout {
     private final Context context;
-    private TextView txtTestPointCoordinate;
     private EditText inputReferencePointRadius, inputPredictPointRadius, inputActualPointRadius, inputK;
     private CheckBox displayReferencePoint;
     private HighlightButton btConfirm, btCancel;
     private FunctionView apValueView, highlightFunctionView, weightFunctionView;
-    private Spinner testPointSpinner;
 
     private boolean isActivate;
 
@@ -37,7 +35,6 @@ public class SettingsView extends LinearLayout {
     @SuppressLint("DefaultLocale")
     private void initView(){
         inflate(context, R.layout.window_settingsview, this);
-        txtTestPointCoordinate = findViewById(R.id.txtTestPointCoordinate);
         inputReferencePointRadius = findViewById(R.id.inputReferencePointRadius);
         inputPredictPointRadius = findViewById(R.id.inputPredictPointRadius);
         inputActualPointRadius = findViewById(R.id.inputActualPointRadius);
@@ -48,7 +45,6 @@ public class SettingsView extends LinearLayout {
         apValueView = findViewById(R.id.apValueView);
         highlightFunctionView = findViewById(R.id.highlightFunctionView);
         weightFunctionView = findViewById(R.id.weightFunctionView);
-        testPointSpinner = findViewById(R.id.testPointSpinner);
 
         btConfirm.setOnButtonDownListener(new HighlightButton.OnButtonDownListener() {
             @Override
@@ -62,22 +58,6 @@ public class SettingsView extends LinearLayout {
             @Override
             public void buttonDown() {
                 closeView();
-            }
-        });
-
-        testPointSpinner.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().getAllTestPointNames()));
-        // testPointSpinner.setSelection(ConfigManager.getInstance().getCurrentTestPointIndex());
-        testPointSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                TestPoint testPoint = ConfigManager.getInstance().getTestPointAtIndex(i);
-
-                txtTestPointCoordinate.setText(String.format("(%.2f , %.2f)", testPoint.coordinateX, testPoint.coordinateY));
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> adapterView) {
-
             }
         });
 
@@ -109,7 +89,7 @@ public class SettingsView extends LinearLayout {
         config.actualPointRadius = Integer.parseInt(inputActualPointRadius.getText().toString());
         config.displayReferencePoint = displayReferencePoint.isChecked();
         config.k = Integer.parseInt(inputK.getText().toString());
-        config.setTestPointAtIndex(testPointSpinner.getSelectedItemPosition());
+        // config.setTestPointAtIndex(testPointSpinner.getSelectedItemPosition());
         apValueView.setAllChecked(config.enableApValues);
         highlightFunctionView.setAllChecked(config.enableHighlightFunctions);
         weightFunctionView.setAllChecked(config.enableWeightFunctions);
@@ -126,8 +106,6 @@ public class SettingsView extends LinearLayout {
         inputActualPointRadius.setText(String.valueOf(config.actualPointRadius));
         displayReferencePoint.setChecked(config.displayReferencePoint);
         inputK.setText(String.valueOf(config.k));
-        testPointSpinner.setSelection(ConfigManager.getInstance().getCurrentTestPointIndex());
-        txtTestPointCoordinate.setText(String.format("(%.2f, %.2f)", config.testPoint.coordinateX, config.testPoint.coordinateY));
         apValueView.setFunctions(config.apValues, config.enableApValues);
         highlightFunctionView.setFunctions(config.getAllHighlightFunctionNames(), config.enableHighlightFunctions);
         weightFunctionView.setFunctions(config.getAllWeightFunctionNames(), config.enableWeightFunctions);

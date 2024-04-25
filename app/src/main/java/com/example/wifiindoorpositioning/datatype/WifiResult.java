@@ -22,4 +22,8 @@ public class WifiResult {
         this.level = level;
         this.apId = apId;
     }
+
+    public void applyApId(){
+        this.apId = SSID + ":" + BSSID;
+    }
 }

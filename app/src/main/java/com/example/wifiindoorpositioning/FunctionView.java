@@ -11,6 +11,7 @@ import androidx.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Dictionary;
 import java.util.Enumeration;
+import java.util.HashMap;
 
 public class FunctionView extends LinearLayout {
     private final Context context;
@@ -40,13 +41,13 @@ public class FunctionView extends LinearLayout {
         }
     }
 
-    public void setAllChecked(Dictionary<String, Boolean> checks){
+    public void setAllChecked(HashMap<String, Boolean> checks){
         for (int i = 0; i < checkBoxes.size(); i++){
             checks.put(checkBoxes.get(i).getText().toString(), checkBoxes.get(i).isChecked());
         }
     }
 
-    public void setFunctions(ArrayList<String> names, Dictionary<String, Boolean> checks){
+    public void setFunctions(ArrayList<String> names, HashMap<String, Boolean> checks){
         hideAllView();
 
         ArrayList<String> copy = new ArrayList<>(names);
@@ -59,12 +60,12 @@ public class FunctionView extends LinearLayout {
                 CheckBox checkBox = new CheckBox(context);
                 checkBox.setTextAlignment(TEXT_ALIGNMENT_CENTER);
                 checkBox.setText(name);
-                checkBox.setChecked(checks.get(name));
+                checkBox.setChecked(Boolean.TRUE.equals(checks.get(name)));
                 checkBoxes.add(checkBox);
                 addView(checkBox);
             } else {
                 checkBoxes.get(i).setText(name);
-                checkBoxes.get(i).setChecked(checks.get(name));
+                checkBoxes.get(i).setChecked(Boolean.TRUE.equals(checks.get(name)));
                 checkBoxes.get(i).setVisibility(VISIBLE);
             }
 
@@ -72,7 +73,7 @@ public class FunctionView extends LinearLayout {
         }
     }
 
-    public void setFunctions(String[] names, Dictionary<String, Boolean> checks){
+    public void setFunctions(String[] names, HashMap<String, Boolean> checks){
         hideAllView();
 
         for (int i = 0; i < names.length; i++){
@@ -82,12 +83,12 @@ public class FunctionView extends LinearLayout {
                 CheckBox checkBox = new CheckBox(context);
                 checkBox.setTextAlignment(TEXT_ALIGNMENT_CENTER);
                 checkBox.setText(name);
-                checkBox.setChecked(checks.get(name));
+                checkBox.setChecked(Boolean.TRUE.equals(checks.get(name)));
                 checkBoxes.add(checkBox);
                 addView(checkBox);
             } else {
                 checkBoxes.get(i).setText(name);
-                checkBoxes.get(i).setChecked(checks.get(name));
+                checkBoxes.get(i).setChecked(Boolean.TRUE.equals(checks.get(name)));
                 checkBoxes.get(i).setVisibility(VISIBLE);
             }
         }

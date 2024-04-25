@@ -13,6 +13,8 @@ import com.example.wifiindoorpositioning.datatype.ApDistanceInfo;
 import com.example.wifiindoorpositioning.datatype.DistanceInfo;
 import com.example.wifiindoorpositioning.datatype.WifiResult;
 
+import java.util.ArrayList;
+
 public class InfoDisplayView extends LinearLayout {
 
     private final Context context;
@@ -61,10 +63,12 @@ public class InfoDisplayView extends LinearLayout {
         txtViewSSID.setText(distanceInfo.rpName);
         txtViewBSSID.setText(String.valueOf(distanceInfo.distance));
         txtViewLevel.setText(String.format("(%.2f, %.2f)", distanceInfo.coordinateX, distanceInfo.coordinateY));
-        txtViewFrequency.setText(String.format("loss rate: %d/%d (%.2f), new rate: %d/%d (%.2f)\nweight: %.4f",
+
+        txtViewFrequency.setText(String.format("loss rate: %d/%d (%.2f), new rate: %d/%d (%.2f)\nweight: %.4f, [%s, %s, %s]",
                 distanceInfo.notFoundNum, distanceInfo.pastFoundNum, (float)distanceInfo.notFoundNum / distanceInfo.pastFoundNum,
                 distanceInfo.foundNum, distanceInfo.pastNotFoundNum, (float)distanceInfo.foundNum / distanceInfo.pastNotFoundNum,
-                distanceInfo.weight));
+                distanceInfo.weight, distanceInfo.newSameOverlapPercent.get(0),
+                distanceInfo.newSameOverlapPercent.get(1), distanceInfo.newSameOverlapPercent.get(2)));
     }
 
     public void setInfo(WifiResult result){
