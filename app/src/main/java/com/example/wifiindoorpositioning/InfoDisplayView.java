@@ -73,8 +73,8 @@ public class InfoDisplayView extends LinearLayout {
 
     public void setInfo(WifiResult result){
         txtViewSSID.setText(result.apId);
-        txtViewBSSID.setText(String.valueOf(result.level));
-        txtViewLevel.setText(result.level == -100 ? "notfound" : "");
+        txtViewBSSID.setText(result.level != -100 ? String.valueOf(result.level) : "notfound");
+        txtViewLevel.setText(result.rpLevel != -100 ? String.valueOf(result.rpLevel) : "notfound");
         txtViewFrequency.setText("");
     }
 

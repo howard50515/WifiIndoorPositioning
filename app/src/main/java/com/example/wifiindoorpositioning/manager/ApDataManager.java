@@ -124,10 +124,9 @@ public class ApDataManager {
     }
 
     public static String getValue(InputStream stream){
-        BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
         StringBuilder builder = new StringBuilder();
 
-        try {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream))){
             String line;
             while ((line = reader.readLine()) != null)
                 builder.append(line).append('\n');
@@ -203,16 +202,16 @@ public class ApDataManager {
     }
 
     private static ArrayList<String> loadAccessPoints(AssetManager assetManager, String path){
-        try {
-            return new Gson().fromJson(getValue(assetManager.open(path)), new TypeToken<ArrayList<String>>(){}.getType());
+        try (InputStream inputStream = assetManager.open(path)) {
+            return new Gson().fromJson(getValue(inputStream), new TypeToken<ArrayList<String>>(){}.getType());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
     private static ArrayList<ReferencePoint> loadFingerPrint(AssetManager assetManager, String path){
-        try {
-            return new Gson().fromJson(getValue(assetManager.open(path)), new TypeToken<ArrayList<ReferencePoint>>(){}.getType());
+        try (InputStream inputStream = assetManager.open(path)){
+            return new Gson().fromJson(getValue(inputStream), new TypeToken<ArrayList<ReferencePoint>>(){}.getType());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -242,10 +241,16 @@ public class ApDataManager {
         for (String apName : accessPoints){
             WifiResult r = null;
 
-            for (WifiResult result : results){
-                if (result.apId.equals(apName)){
-                    r = result;
-                    break;
+            //TODO 標示為不合法level，暫時性的移除NCUCE_2.4G的影響
+            if (apName.contains("NCUCE_2.4G:")){
+                r = new WifiResult(apName, -200);
+            }
+            else{
+                for (WifiResult result : results){
+                    if (result.apId.equals(apName)){
+                        r = result;
+                        break;
+                    }
                 }
             }
 
@@ -269,6 +274,10 @@ public class ApDataManager {
             int foundNum = 0;
 
             for (int j = 0; j < rp.vector.size(); j++){
+                //TODO 檢測不合法level，暫時性的移除NCUCE_2.4G的影響
+                if (ssids.get(j) == -200)
+                    continue;
+
                 if (rp.vector.get(j) != -100){
                     pastFoundNum++;
 

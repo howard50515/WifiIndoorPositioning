@@ -106,6 +106,8 @@ public class SystemServiceManager implements SensorEventListener {
             intentFilter.addAction(WifiRttManager.ACTION_WIFI_RTT_STATE_CHANGED);
         }
         context.registerReceiver(receiver, intentFilter);
+
+        completeCallback = callback;
         if (ActivityCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED){
             callback.complete(CODE_NO_PERMISSION, null);
             return;
@@ -113,13 +115,14 @@ public class SystemServiceManager implements SensorEventListener {
 
         boolean scanSymbol = wifiManager.startScan();
 
-        completeCallback = callback;
         if (!scanSymbol){
             callback.complete(CODE_NO_LOCATION, null);
         }
     }
 
     private void receiveScan(boolean success) {
+        if (completeCallback == null) return;
+
         if (ActivityCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED){
             completeCallback.complete(CODE_NO_PERMISSION, null);
             return;

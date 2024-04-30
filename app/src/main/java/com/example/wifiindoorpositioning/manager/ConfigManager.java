@@ -18,6 +18,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
@@ -94,9 +95,9 @@ public class ConfigManager {
     }
 
     public TestPointInfo getResultHistory(int index){
-        try{
-            TestPointInfo testPointInfo = new Gson().fromJson(ApDataManager.getValue(
-                    assetManager.open(resultHistoriesDirectoryName + "/" + resultHistories[index])), new TypeToken<TestPointInfo>(){}.getType());
+        try (InputStream inputStream = assetManager.open(resultHistoriesDirectoryName + "/" + resultHistories[index])) {
+            TestPointInfo testPointInfo = new Gson().fromJson(ApDataManager.getValue(inputStream),
+                    new TypeToken<TestPointInfo>(){}.getType());
 
             for (WifiResult result : testPointInfo.results){
                 result.applyApId();
@@ -132,6 +133,16 @@ public class ConfigManager {
 
     public TestPoint getTestPointAtIndex(int index) {
         return testPoints.get(index);
+    }
+
+    public int getTestPointIndex(String name){
+        for (int i = 0; i < testPoints.size(); i++){
+            if (name.equals(testPoints.get(i).name)){
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     public ArrayList<String> getAllTestPointNames(){

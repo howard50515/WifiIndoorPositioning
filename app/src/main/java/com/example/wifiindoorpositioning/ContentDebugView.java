@@ -16,6 +16,7 @@ import android.widget.TextView;
 
 import com.example.wifiindoorpositioning.datatype.ApDistanceInfo;
 import com.example.wifiindoorpositioning.datatype.DistanceInfo;
+import com.example.wifiindoorpositioning.datatype.ReferencePoint;
 import com.example.wifiindoorpositioning.datatype.TestPoint;
 import com.example.wifiindoorpositioning.datatype.TestPointInfo;
 import com.example.wifiindoorpositioning.datatype.WifiResult;
@@ -25,16 +26,17 @@ import com.example.wifiindoorpositioning.manager.SystemServiceManager;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class ContentDebugView extends ScrollView {
     private MainActivity activity;
     private final Context context;
     private final ArrayList<InfoDisplayView> displayViews = new ArrayList<>();
-    private Spinner testPointSpinner;
+    private Spinner testPointSpinner, referencePointSpinner;
 
-    private LinearLayout body, apDistanceInfoControlPanel;
-    private TextView txtWait, txtTestPoint;
+    private LinearLayout body, apDistanceInfoControlPanel, wifiResultControlPanel;
+    private TextView txtWait, txtTestPoint, txtReferencePoint;
     private HighlightButton btCopy;
 
     private String mode = "無";
@@ -42,7 +44,7 @@ public class ContentDebugView extends ScrollView {
 
     private TestPointInfo testPointInfo;
 
-    private final int maxDisplayCount = 30;
+    private static final int maxDisplayCount = 30;
 
     public ContentDebugView(Context context) {
         super(context);
@@ -62,8 +64,11 @@ public class ContentDebugView extends ScrollView {
         inflate(context, R.layout.window_contentdisplayview, this);
         body = findViewById(R.id.body);
         apDistanceInfoControlPanel = findViewById(R.id.apDistanceInfoControlPanel);
+        wifiResultControlPanel= findViewById(R.id.wifiResultControlPanel);
         testPointSpinner = findViewById(R.id.testPointSpinner1);
+        referencePointSpinner = findViewById(R.id.referencePointSpinner);
         txtTestPoint = findViewById(R.id.txtTestPoint);
+        txtReferencePoint = findViewById(R.id.txtReferencePoint);
         btCopy = findViewById(R.id.btCopy);
 
         txtWait = new TextView(context);
@@ -80,9 +85,34 @@ public class ContentDebugView extends ScrollView {
         testPointSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                TestPoint testPoint = ConfigManager.getInstance().getTestPointAtIndex(testPointSpinner.getSelectedItemPosition());
+                if (ignoreChanged){
+                    ignoreChanged = false;
+                }
+                else{
+                    ignoreChanged = true;
 
-                setTestPoint(testPoint);
+                    setTestPoint(ConfigManager.getInstance().getTestPointAtIndex(testPointSpinner.getSelectedItemPosition()));
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {
+
+            }
+        });
+
+        setReferencePoints();
+        setReferencePoint(ApDataManager.getInstance().fingerprint.get(0));
+        referencePointSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                if (!fromApChanged) {
+                    setReferencePoint(ApDataManager.getInstance().fingerprint.get(i));
+                }
+                else{
+                    fromApChanged = false;
+                    referencePointSpinner.setSelection(getReferencePointIndex(compareReferencePoint));
+                }
             }
 
             @Override
@@ -104,8 +134,14 @@ public class ContentDebugView extends ScrollView {
             }
         });
 
-        ApDataManager.getInstance().registerOnResultChangedListener(this::refresh);
-        // ConfigManager.getInstance().registerOnConfigChangedListener(() -> testPointSpinner.setSelection(ConfigManager.getInstance().getCurrentTestPointIndex()));
+        ApDataManager.getInstance().registerOnResultChangedListener((code) -> {
+            if (code == ApDataManager.AP_VALUE_CHANGED || code == ApDataManager.UNCERTAIN_CHANGED){
+                setReferencePoints();
+            }
+            else{
+                refresh(code);
+            }
+        });
     }
 
     public void setMainActivity(MainActivity activity){
@@ -121,10 +157,20 @@ public class ContentDebugView extends ScrollView {
 
         txtTestPoint.setText(String.format("%s\n(%.2f, %.2f)", testPoint.name, testPoint.coordinateX, testPoint.coordinateY));
 
+        if (ignoreChanged) {
+            ignoreChanged = false;
+        }
+        else if (!testPoint.name.equals(testPointSpinner.getSelectedItem())){
+            testPointSpinner.setSelection(ConfigManager.getInstance().getTestPointIndex(testPoint.name));
+            ignoreChanged = true;
+        }
+
         refresh(ApDataManager.TEST_POINT_CHANGED);
 
         if (listener != null) listener.pointChange(testPoint.coordinateX, testPoint.coordinateY);
     }
+
+    private boolean ignoreChanged = false;
 
     public void setTestPoint(float x, float y){
         setTestPoint(new TestPoint("自定義", x, y));
@@ -168,6 +214,7 @@ public class ContentDebugView extends ScrollView {
 
     @SuppressLint("ClickableViewAccessibility")
     public void hideAllInfo(){
+        wifiResultControlPanel.setVisibility(GONE);
         apDistanceInfoControlPanel.setVisibility(GONE);
 
         for (InfoDisplayView displayView : displayViews){
@@ -198,11 +245,9 @@ public class ContentDebugView extends ScrollView {
             }
 
             if (displayViews.size() <= i) {
-                InfoDisplayView displayView = new InfoDisplayView(context);
+                InfoDisplayView displayView = addInitInfoDisplayView();
                 displayView.setInfo(distances.get(i));
                 if (isHighlight) displayView.setBackgroundColor(highlightColor);
-                displayViews.add(displayView);
-                body.addView(displayView);
             } else {
                 displayViews.get(i).setInfo(distances.get(i));
                 if (isHighlight) displayViews.get(i).setBackgroundColor(highlightColor);
@@ -211,19 +256,78 @@ public class ContentDebugView extends ScrollView {
         }
     }
 
+    private ReferencePoint compareReferencePoint;
+    private boolean fromApChanged;
+
+    private void setReferencePoints(){
+        referencePointSpinner.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_spinner_dropdown_item,
+                ApDataManager.getInstance().fingerprint.stream().map(rp -> rp.name).toArray()));
+
+        fromApChanged = true;
+
+        if (compareReferencePoint == null) return;
+
+        int index = getReferencePointIndex(compareReferencePoint);
+        if (index != -1){
+            setReferencePoint(ApDataManager.getInstance().fingerprint.get(index));
+        }
+        else{
+            setReferencePoint(ApDataManager.getInstance().fingerprint.get(0));
+        }
+    }
+    @SuppressLint("DefaultLocale")
+    private void setReferencePoint(ReferencePoint referencePoint){
+        int index = getReferencePointIndex(referencePoint);
+
+        if (index == -1) return;
+
+        compareReferencePoint = referencePoint;
+
+        txtReferencePoint.setText(String.format("%s (%.2f, %.2f)", compareReferencePoint.name, compareReferencePoint.coordinateX, compareReferencePoint.coordinateY));
+
+        refresh();
+    }
+
+    private int getReferencePointIndex(ReferencePoint rp){
+        ArrayList<ReferencePoint> referencePoints = ApDataManager.getInstance().fingerprint;
+
+        for (int i = 0; i < referencePoints.size(); i++){
+            if (rp.name.equals(referencePoints.get(i).name)){
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
     public void displayWifiResult(){
         hideAllInfo();
 
-        ArrayList<WifiResult> results = ApDataManager.getInstance().results;
+        System.out.println("HI");
 
-        if (results == null) return;
+        if (ApDataManager.getInstance().results == null) return;
+
+        wifiResultControlPanel.setVisibility(VISIBLE);
+
+        ArrayList<WifiResult> results = new ArrayList<>(ApDataManager.getInstance().results);
+
+        ArrayList<Float> rpLevels = compareReferencePoint.vector;
+
+        for (int i = 0;i < results.size(); i++){
+            WifiResult result = results.get(i);
+
+            result.rpLevel = rpLevels.get(i);
+        }
+
+        results.sort((lhs, rhs) -> -Float.compare(Math.abs(lhs.level - lhs.rpLevel), Math.abs(rhs.level - rhs.rpLevel)));
 
         for (int i = 0; i < results.size(); i++){
+            if (results.get(i).apId.contains("NCUCE_2.4G:"))
+                continue;
+
             if (displayViews.size() <= i) {
-                InfoDisplayView displayView = new InfoDisplayView(context);
+                InfoDisplayView displayView = addInitInfoDisplayView();
                 displayView.setInfo(results.get(i));
-                displayViews.add(displayView);
-                body.addView(displayView);
             } else {
                 displayViews.get(i).setInfo(results.get(i));
                 displayViews.get(i).setVisibility(VISIBLE);
@@ -301,7 +405,6 @@ public class ContentDebugView extends ScrollView {
         //}).start();
     }
 
-    @SuppressLint("ClickableViewAccessibility")
     private void display(ArrayList<ApDistanceInfo> apDistances){
         /// if (!mode.equals("存取點距離")) return;
 
@@ -313,44 +416,7 @@ public class ContentDebugView extends ScrollView {
             InfoDisplayView displayView;
 
             if (displayViews.size() <= i) {
-                displayView = new InfoDisplayView(context);
-                displayView.setOnTouchListener(new OnTouchListener() {
-                    private boolean isOutside;
-
-                    @Override
-                    public boolean onTouch(View view, MotionEvent motionEvent) {
-                        int action = motionEvent.getAction();
-                        switch (action) {
-                            case MotionEvent.ACTION_DOWN:
-                                isOutside = false;
-//                                    displayView.setBackgroundResource(R.drawable.background_rectangle_focus);
-//                                    if (scrollView != null)
-//                                        scrollView.requestDisallowInterceptTouchEvent(true);
-                                break;
-                            case MotionEvent.ACTION_MOVE:
-                                isOutside = motionEvent.getX() > displayView.getWidth() || motionEvent.getX() < 0 ||
-                                        motionEvent.getY() > displayView.getHeight() || motionEvent.getY() < 0;
-//                                    if (!isOutside)
-//                                        displayView.setBackgroundResource(R.drawable.background_rectangle_focus);
-//                                    else
-//                                        displayView.setBackgroundResource(R.drawable.background_rectangle_transparent_unfocus);
-                                break;
-                            case MotionEvent.ACTION_UP:
-//                                    displayView.setBackgroundResource(R.drawable.background_rectangle_transparent_unfocus);
-//                                    if (scrollView != null)
-//                                        scrollView.requestDisallowInterceptTouchEvent(false);
-                                if (!isOutside) {
-                                    if (mode.equals("存取點距離"))
-                                        activity.setApValueFunctions(displayView.apDistance.apValueName, displayView.apDistance.highlightFunctionName, displayView.apDistance.weightFunctionName);
-                                }
-                                break;
-                        }
-
-                        return true;
-                    }
-                });
-                displayViews.add(displayView);
-                body.addView(displayView);
+                displayView = addInitInfoDisplayView();
             } else {
                 displayView = displayViews.get(i);
                 displayViews.get(i).setVisibility(VISIBLE);
@@ -358,6 +424,25 @@ public class ContentDebugView extends ScrollView {
 
             displayView.setInfo(apDistance);
         }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private InfoDisplayView addInitInfoDisplayView(){
+        InfoDisplayView displayView = new InfoDisplayView(context);
+        displayView.setOnTouchListener((view, motionEvent) -> {
+            if (motionEvent.getAction() == MotionEvent.ACTION_UP){
+                if (mode.equals("存取點距離")){
+                    activity.setApValueFunctions(displayView.apDistance.apValueName,
+                            displayView.apDistance.highlightFunctionName, displayView.apDistance.weightFunctionName);
+                }
+            }
+
+            return true;
+        });
+        displayViews.add(displayView);
+        body.addView(displayView);
+
+        return displayView;
     }
 
     private OnTestPointChangedListener listener;

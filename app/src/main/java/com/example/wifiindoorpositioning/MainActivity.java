@@ -27,14 +27,11 @@ import java.util.ArrayList;
 public class MainActivity extends AppCompatActivity {
     private ImageView imgCompass;
     private TextView txtOrientation, txtStatus, txtDistance;
-    // private EditText inputAcceptDifference;
     private ZoomableImageView mapImage;
     private Spinner debugModeSpinner, apValueModeSpinner, highlightModeSpinner, displayModeSpinner, weightModeSpinner, resultHistoriesSpinner;
     private ContentDebugView contentView;
     private HighlightButton btScan, btSettings;
     private SettingsView settingsView;
-
-    // private final Float[] acceptDifference = new Float[] { 0.4f };
 
     @SuppressLint({"ClickableViewAccessibility", "SetTextI18n", "DefaultLocale"})
     @Override
@@ -53,7 +50,6 @@ public class MainActivity extends AppCompatActivity {
         mapImage = findViewById(R.id.zoomableView);
         btScan = findViewById(R.id.btScan);
         btSettings = findViewById(R.id.btSettings);
-        // inputAcceptDifference = findViewById(R.id.inputAcceptDifference);
         debugModeSpinner = findViewById(R.id.debugModeSpinner);
         apValueModeSpinner = findViewById(R.id.apValueModeSpinner);
         highlightModeSpinner = findViewById(R.id.highlightModeSpinner);
@@ -131,7 +127,6 @@ public class MainActivity extends AppCompatActivity {
                 return new ArrayList<>(sortDistances.subList(0, Math.min(k, sortDistances.size())));
             }
         });
-        // ApDataManager.getInstance().addHighlightFunction("距離前?%", new DistanceRateHighlightFunction(acceptDifference));
         ConfigManager.getInstance().addWeightFunction("自訂權重", highlights -> {
             ArrayList<Float> weights = new ArrayList<>();
             if (highlights.size() == 0) return weights;
@@ -258,27 +253,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-//        inputAcceptDifference.addTextChangedListener(new TextWatcher() {
-//            @Override
-//            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-//
-//            }
-//
-//            @Override
-//            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-//                try{
-//                    acceptDifference[0] = Float.parseFloat(inputAcceptDifference.getText().toString());
-//
-//                    ApDataManager.getInstance().calculateResult(ApDataManager.HIGHLIGHT_FUNCTION_CHANGED);
-//                } catch (NumberFormatException ignored) {}
-//            }
-//
-//            @Override
-//            public void afterTextChanged(Editable editable) {
-//
-//            }
-//        });
-
         apValueModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().apValues));
         resultHistoriesSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().getResultHistoriesName()));
         highlightModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().getAllHighlightFunctionNames()));
@@ -340,7 +314,6 @@ public class MainActivity extends AppCompatActivity {
                 TestPointInfo testPointInfo = ConfigManager.getInstance().getResultHistory(i);
 
                 contentView.setTestPoint(testPointInfo.testPoint);
-                // contentView.setTestPoint(testPointInfo.testPoint);
 
                 ApDataManager.getInstance().setResult(testPointInfo.results);
             }
@@ -351,7 +324,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        mapImage.setReferencePoints(ApDataManager.getInstance().fingerprint);
         mapImage.setNorthOffset(180);
         mapImage.setOnImagePointChangedListener(new ZoomableImageView.OnImagePointChangedListener() {
             @Override
@@ -431,8 +403,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void setApValueFunctions(String apValueName, String highlightFunctionName, String weightFunctionName){
-        System.out.println(apValueName + " " + highlightFunctionName + " " + weightFunctionName);
-
         apValueModeSpinner.setSelection(ConfigManager.getInstance().getApValueIndex(apValueName));
         highlightModeSpinner.setSelection(ConfigManager.getInstance().getHighlightFunctionIndex(highlightFunctionName));
         weightModeSpinner.setSelection(ConfigManager.getInstance().getWeightFunctionIndex(weightFunctionName));
