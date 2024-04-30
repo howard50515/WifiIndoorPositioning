@@ -127,6 +127,45 @@ public class MainActivity extends AppCompatActivity {
                 return new ArrayList<>(sortDistances.subList(0, Math.min(k, sortDistances.size())));
             }
         });
+        ConfigManager.getInstance().addHighlightFunction("Mod 取低new rate", new HighlightFunction() {
+            @Override
+            public ArrayList<DistanceInfo> highlight(ArrayList<DistanceInfo> distances, int k) {
+                ArrayList<DistanceInfo> sortDistances = new ArrayList<>(distances);
+
+                sortDistances.sort(DistanceInfo.distanceComparable);
+
+                if (sortDistances.size() <= 1) return sortDistances;
+
+                //float distancetofirst = sortDistances.get(0).distance;
+
+                for (int i = sortDistances.size() - 1; i > 0; i--)  {
+                    float disX = sortDistances.get(i).coordinateX - sortDistances.get(0).coordinateX;
+                    float disY = sortDistances.get(i).coordinateY - sortDistances.get(0).coordinateY;
+
+                    float d = (float) Math.sqrt((disX * disX) + (disY * disY));
+
+                    if(d > 1500 ){
+                        sortDistances.remove(i);
+                    }
+                }
+
+                float[] NR = new float[sortDistances.size()];
+                int foundNum = sortDistances.get(0).foundNum;
+                int pastNotFoundNum = sortDistances.get(0).pastNotFoundNum;
+                NR[0] = (float) foundNum / pastNotFoundNum;
+
+                for (int i = sortDistances.size() - 1; i > 0; i--) {
+                    foundNum = sortDistances.get(i).foundNum;
+                    pastNotFoundNum = sortDistances.get(i).pastNotFoundNum;
+                    NR[i] = (float) foundNum / pastNotFoundNum;
+                    if(NR[i] > NR[0]) {
+                        sortDistances.remove(i);
+                    }
+                }
+
+                return new ArrayList<>(sortDistances.subList(0, Math.min(k, sortDistances.size())));
+            }
+        });
         ConfigManager.getInstance().addWeightFunction("自訂權重", highlights -> {
             ArrayList<Float> weights = new ArrayList<>();
             if (highlights.size() == 0) return weights;
