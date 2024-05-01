@@ -6,13 +6,16 @@ import android.annotation.SuppressLint;
 import android.graphics.PointF;
 import android.os.Bundle;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.example.wifiindoorpositioning.datatype.DistanceInfo;
+import com.example.wifiindoorpositioning.datatype.TestPoint;
 import com.example.wifiindoorpositioning.datatype.TestPointInfo;
 import com.example.wifiindoorpositioning.function.DistanceRateHighlightFunction;
 import com.example.wifiindoorpositioning.function.FirstKDistanceHighlightFunction;
@@ -25,39 +28,48 @@ import com.example.wifiindoorpositioning.manager.SystemServiceManager;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
+    public  LinearLayout debugView;
+    private LinearLayout rootView;
     private ImageView imgCompass;
     private TextView txtOrientation, txtStatus, txtDistance;
     private ZoomableImageView mapImage;
-    private Spinner debugModeSpinner, apValueModeSpinner, highlightModeSpinner, displayModeSpinner, weightModeSpinner, resultHistoriesSpinner;
+    private Spinner debugModeSpinner, apValueModeSpinner, highlightModeSpinner, displayModeSpinner, weightModeSpinner, resultHistoriesSpinner, testPointSpinner;
     private ContentDebugView contentView;
-    private HighlightButton btScan, btSettings;
+    private HighlightButton btScan, btSettings, btCopy;
     private SettingsView settingsView;
 
     @SuppressLint({"ClickableViewAccessibility", "SetTextI18n", "DefaultLocale"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         ConfigManager.createInstance(this);
         ApDataManager.createInstance(this);
         SystemServiceManager.createInstance(this);
 
         setContentView(R.layout.activity_main);
 
+        rootView = findViewById(R.id.mainActivityRootView);
+        debugView = findViewById(R.id.debugView);
         imgCompass = findViewById(R.id.imgCompass);
         txtOrientation = findViewById(R.id.orientation);
         txtStatus = findViewById(R.id.txtStatus);
-        txtDistance = findViewById(R.id.txtDistance);
+        txtDistance = findViewById(R.id.txtTestPoint);
         mapImage = findViewById(R.id.zoomableView);
         btScan = findViewById(R.id.btScan);
         btSettings = findViewById(R.id.btSettings);
+        btCopy = findViewById(R.id.btCopy);
         debugModeSpinner = findViewById(R.id.debugModeSpinner);
         apValueModeSpinner = findViewById(R.id.apValueModeSpinner);
         highlightModeSpinner = findViewById(R.id.highlightModeSpinner);
         displayModeSpinner = findViewById(R.id.displayModeSpinner);
         weightModeSpinner = findViewById(R.id.weightModeSpinner);
         resultHistoriesSpinner = findViewById(R.id.resultHistoriesSpinner);
+        testPointSpinner = findViewById(R.id.testPointSpinner);
         contentView = findViewById(R.id.contentView);
         settingsView = new SettingsView(this);
+
+        ConfigManager.getInstance().debugView = debugView;
 
         ConfigManager.getInstance().addHighlightFunction("距離排序3個", new FirstKDistanceHighlightFunction(3));
         ConfigManager.getInstance().addHighlightFunction("距離排序4個", new FirstKDistanceHighlightFunction(4));
@@ -297,6 +309,7 @@ public class MainActivity extends AppCompatActivity {
         highlightModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().getAllHighlightFunctionNames()));
         displayModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().getAllDisplayFunctionNames()));
         weightModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().getAllWeightFunctionNames()));
+        testPointSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().getAllTestPointNames()));
 
         highlightModeSpinner.setSelection(ApDataManager.getInstance().getCurrentHighlightFunctionIndex());
         displayModeSpinner.setSelection(ApDataManager.getInstance().getCurrentDisplayFunctionIndex());
@@ -352,9 +365,31 @@ public class MainActivity extends AppCompatActivity {
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
                 TestPointInfo testPointInfo = ConfigManager.getInstance().getResultHistory(i);
 
-                contentView.setTestPoint(testPointInfo.testPoint);
+                testPointSpinner.setSelection(ConfigManager.getInstance().getTestPointIndex(testPointInfo.testPoint.name));
 
                 ApDataManager.getInstance().setResult(testPointInfo.results);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {
+
+            }
+        });
+        testPointSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                TestPoint testPoint = ConfigManager.getInstance().getTestPointAtIndex(i);
+
+                PointF p = mapImage.getImagePoint();
+                float diffX = testPoint.coordinateX - p.x;
+                float diffY = testPoint.coordinateY - p.y;
+
+                mapImage.setFingerPoint(testPoint.coordinateX, testPoint.coordinateY);
+
+                contentView.setTestPoint(testPoint);
+
+                txtDistance.setText(String.format("%.2f, %s\n(%.2f, %.2f)",
+                        Math.sqrt(diffX * diffX + diffY * diffY), testPoint.name, testPoint.coordinateX, testPoint.coordinateY));
             }
 
             @Override
@@ -367,11 +402,12 @@ public class MainActivity extends AppCompatActivity {
         mapImage.setOnImagePointChangedListener(new ZoomableImageView.OnImagePointChangedListener() {
             @Override
             public void pointChange(float x, float y) {
-                PointF p = mapImage.getFingerPoint();
-                float diffX = x - p.x;
-                float diffY = y - p.y;
+                TestPoint p = contentView.getTestPoint();
+                float diffX = x - p.coordinateX;
+                float diffY = y - p.coordinateY;
 
-                txtDistance.setText(String.format("%.2f, (%.2f, %.2f)", Math.sqrt(diffX * diffX + diffY * diffY), p.x, p.y));
+                txtDistance.setText(String.format("%.2f, %s\n(%.2f, %.2f)",
+                        Math.sqrt(diffX * diffX + diffY * diffY), p.name, p.coordinateX, p.coordinateY));
             }
         });
         mapImage.setOnFingerPointChangedListener(new ZoomableImageView.OnFingerPointChangedListener() {
@@ -381,19 +417,20 @@ public class MainActivity extends AppCompatActivity {
                 float diffX = x - p.x;
                 float diffY = y - p.y;
 
-                txtDistance.setText(String.format("%.2f, (%.2f, %.2f)", Math.sqrt(diffX * diffX + diffY * diffY), x, y));
-
                 contentView.setTestPoint(x, y);
+
+                txtDistance.setText(String.format("%.2f, %s\n(%.2f, %.2f)",
+                        Math.sqrt(diffX * diffX + diffY * diffY), contentView.getTestPoint().name, x, y));
             }
         });
 
         contentView.setMainActivity(this);
-        contentView.setOnTestPointChangedListener(new ContentDebugView.OnTestPointChangedListener() {
-            @Override
-            public void pointChange(float x, float y) {
-                mapImage.setFingerPoint(x, y);
-            }
-        });
+//        contentView.setOnTestPointChangedListener(new ContentDebugView.OnTestPointChangedListener() {
+//            @Override
+//            public void pointChange(float x, float y) {
+//                mapImage.setFingerPoint(x, y);
+//            }
+//        });
 
         btScan.setOnButtonDownListener(() -> {
             txtStatus.setText("掃描中...");
@@ -419,6 +456,22 @@ public class MainActivity extends AppCompatActivity {
             });
         });
         btSettings.setOnButtonDownListener(() -> settingsView.showView(this));
+        btCopy.setOnButtonDownListener(() -> SystemServiceManager.getInstance().toClipBoard(ApDataManager.getInstance().originalResults));
+
+        ConfigManager.getInstance().registerOnConfigChangedListener(new ConfigManager.OnConfigChangedListener() {
+            @Override
+            public void onConfigChanged() {
+                if (!ConfigManager.getInstance().isDebugMode){
+                    rootView.removeView(debugView);
+                }
+                else{
+                    ViewGroup parent = (ViewGroup) debugView.getParent();
+                    if (parent != null)
+                        parent.removeView(debugView);
+                    rootView.addView(debugView);
+                }
+            }
+        });
 
         SystemServiceManager.getInstance().setOnOrientationChangedListener(degree -> {
             imgCompass.setRotation(degree);

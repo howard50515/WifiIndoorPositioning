@@ -9,7 +9,7 @@ public class WifiResult {
 
     public transient String apId;
 
-    public float rpLevel;
+    public transient float rpLevel;
 
     public WifiResult(ScanResult result){
         BSSID = result.BSSID;

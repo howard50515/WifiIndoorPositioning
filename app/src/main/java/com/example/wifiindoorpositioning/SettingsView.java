@@ -3,24 +3,19 @@ package com.example.wifiindoorpositioning;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
-import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
-import android.widget.Spinner;
-import android.widget.TextView;
 
-import com.example.wifiindoorpositioning.datatype.TestPoint;
 import com.example.wifiindoorpositioning.manager.ConfigManager;
 
 public class SettingsView extends LinearLayout {
     private final Context context;
+    private LinearLayout rootView;
     private EditText inputReferencePointRadius, inputPredictPointRadius, inputActualPointRadius, inputK;
-    private CheckBox displayReferencePoint;
+    private CheckBox debugModeCheckBox;
     private HighlightButton btConfirm, btCancel;
     private FunctionView apValueView, highlightFunctionView, weightFunctionView;
 
@@ -35,11 +30,12 @@ public class SettingsView extends LinearLayout {
     @SuppressLint("DefaultLocale")
     private void initView(){
         inflate(context, R.layout.window_settingsview, this);
+        rootView = findViewById(R.id.settingsRootView);
         inputReferencePointRadius = findViewById(R.id.inputReferencePointRadius);
         inputPredictPointRadius = findViewById(R.id.inputPredictPointRadius);
         inputActualPointRadius = findViewById(R.id.inputActualPointRadius);
         inputK = findViewById(R.id.inputK);
-        displayReferencePoint = findViewById(R.id.displayReferencePoint);
+        debugModeCheckBox = findViewById(R.id.displayReferencePoint);
         btConfirm = findViewById(R.id.btConfirm);
         btCancel = findViewById(R.id.btCancel);
         apValueView = findViewById(R.id.apValueView);
@@ -58,6 +54,25 @@ public class SettingsView extends LinearLayout {
             @Override
             public void buttonDown() {
                 closeView();
+            }
+        });
+
+        debugModeCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                ConfigManager.getInstance().isDebugMode = b;
+
+                LinearLayout debugView = ConfigManager.getInstance().debugView;
+
+                if (ConfigManager.getInstance().isDebugMode){
+                    rootView.removeView(debugView);
+                }
+                else{
+                    ViewGroup parent = (ViewGroup) debugView.getParent();
+                    if (parent != null)
+                        parent.removeView(debugView);
+                    rootView.addView(debugView);
+                }
             }
         });
 
@@ -87,7 +102,7 @@ public class SettingsView extends LinearLayout {
         config.referencePointRadius = Integer.parseInt(inputReferencePointRadius.getText().toString());
         config.predictPointRadius = Integer.parseInt(inputPredictPointRadius.getText().toString());
         config.actualPointRadius = Integer.parseInt(inputActualPointRadius.getText().toString());
-        config.displayReferencePoint = displayReferencePoint.isChecked();
+        config.isDebugMode = debugModeCheckBox.isChecked();
         config.k = Integer.parseInt(inputK.getText().toString());
         // config.setTestPointAtIndex(testPointSpinner.getSelectedItemPosition());
         apValueView.setAllChecked(config.enableApValues);
@@ -104,7 +119,7 @@ public class SettingsView extends LinearLayout {
         inputReferencePointRadius.setText(String.valueOf(config.referencePointRadius));
         inputPredictPointRadius.setText(String.valueOf(config.predictPointRadius));
         inputActualPointRadius.setText(String.valueOf(config.actualPointRadius));
-        displayReferencePoint.setChecked(config.displayReferencePoint);
+        debugModeCheckBox.setChecked(config.isDebugMode);
         inputK.setText(String.valueOf(config.k));
         apValueView.setFunctions(config.apValues, config.enableApValues);
         highlightFunctionView.setFunctions(config.getAllHighlightFunctionNames(), config.enableHighlightFunctions);

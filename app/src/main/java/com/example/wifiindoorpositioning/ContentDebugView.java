@@ -33,7 +33,7 @@ public class ContentDebugView extends ScrollView {
     private MainActivity activity;
     private final Context context;
     private final ArrayList<InfoDisplayView> displayViews = new ArrayList<>();
-    private Spinner testPointSpinner, referencePointSpinner;
+    private Spinner referencePointSpinner;
 
     private LinearLayout body, apDistanceInfoControlPanel, wifiResultControlPanel;
     private TextView txtWait, txtTestPoint, txtReferencePoint;
@@ -65,7 +65,7 @@ public class ContentDebugView extends ScrollView {
         body = findViewById(R.id.body);
         apDistanceInfoControlPanel = findViewById(R.id.apDistanceInfoControlPanel);
         wifiResultControlPanel= findViewById(R.id.wifiResultControlPanel);
-        testPointSpinner = findViewById(R.id.testPointSpinner1);
+        // testPointSpinner = findViewById(R.id.testPointSpinner1);
         referencePointSpinner = findViewById(R.id.referencePointSpinner);
         txtTestPoint = findViewById(R.id.txtTestPoint);
         txtReferencePoint = findViewById(R.id.txtReferencePoint);
@@ -81,25 +81,25 @@ public class ContentDebugView extends ScrollView {
 
         body.addView(txtWait);
 
-        testPointSpinner.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().getAllTestPointNames()));
-        testPointSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                if (ignoreChanged){
-                    ignoreChanged = false;
-                }
-                else{
-                    ignoreChanged = true;
-
-                    setTestPoint(ConfigManager.getInstance().getTestPointAtIndex(testPointSpinner.getSelectedItemPosition()));
-                }
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> adapterView) {
-
-            }
-        });
+//        testPointSpinner.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().getAllTestPointNames()));
+//        testPointSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+//            @Override
+//            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+//                if (ignoreChanged){
+//                    ignoreChanged = false;
+//                }
+//                else{
+//                    ignoreChanged = true;
+//
+//                    setTestPoint(ConfigManager.getInstance().getTestPointAtIndex(testPointSpinner.getSelectedItemPosition()));
+//                }
+//            }
+//
+//            @Override
+//            public void onNothingSelected(AdapterView<?> adapterView) {
+//
+//            }
+//        });
 
         setReferencePoints();
         setReferencePoint(ApDataManager.getInstance().fingerprint.get(0));
@@ -136,7 +136,7 @@ public class ContentDebugView extends ScrollView {
 
         ApDataManager.getInstance().registerOnResultChangedListener((code) -> {
             if (code == ApDataManager.AP_VALUE_CHANGED || code == ApDataManager.UNCERTAIN_CHANGED){
-                setReferencePoints();
+                setReferencePoints(code);
             }
             else{
                 refresh(code);
@@ -148,6 +148,10 @@ public class ContentDebugView extends ScrollView {
         this.activity = activity;
     }
 
+    public TestPoint getTestPoint(){
+        return testPoint;
+    }
+
     @SuppressLint("DefaultLocale")
     public void setTestPoint(TestPoint testPoint){
         this.testPoint = testPoint;
@@ -157,20 +161,20 @@ public class ContentDebugView extends ScrollView {
 
         txtTestPoint.setText(String.format("%s\n(%.2f, %.2f)", testPoint.name, testPoint.coordinateX, testPoint.coordinateY));
 
-        if (ignoreChanged) {
-            ignoreChanged = false;
-        }
-        else if (!testPoint.name.equals(testPointSpinner.getSelectedItem())){
-            testPointSpinner.setSelection(ConfigManager.getInstance().getTestPointIndex(testPoint.name));
-            ignoreChanged = true;
-        }
+//        if (ignoreChanged) {
+//            ignoreChanged = false;
+//        }
+//        else if (!testPoint.name.equals(testPointSpinner.getSelectedItem())){
+//            testPointSpinner.setSelection(ConfigManager.getInstance().getTestPointIndex(testPoint.name));
+//            ignoreChanged = true;
+//        }
 
         refresh(ApDataManager.TEST_POINT_CHANGED);
 
-        if (listener != null) listener.pointChange(testPoint.coordinateX, testPoint.coordinateY);
+        // if (listener != null) listener.pointChange(testPoint.coordinateX, testPoint.coordinateY);
     }
 
-    private boolean ignoreChanged = false;
+    // private boolean ignoreChanged = false;
 
     public void setTestPoint(float x, float y){
         setTestPoint(new TestPoint("自定義", x, y));
@@ -260,6 +264,10 @@ public class ContentDebugView extends ScrollView {
     private boolean fromApChanged;
 
     private void setReferencePoints(){
+        setReferencePoints(ApDataManager.UNCERTAIN_CHANGED);
+    }
+
+    private void setReferencePoints(int code){
         referencePointSpinner.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_spinner_dropdown_item,
                 ApDataManager.getInstance().fingerprint.stream().map(rp -> rp.name).toArray()));
 
@@ -269,14 +277,20 @@ public class ContentDebugView extends ScrollView {
 
         int index = getReferencePointIndex(compareReferencePoint);
         if (index != -1){
-            setReferencePoint(ApDataManager.getInstance().fingerprint.get(index));
+            setReferencePoint(ApDataManager.getInstance().fingerprint.get(index), code);
         }
         else{
-            setReferencePoint(ApDataManager.getInstance().fingerprint.get(0));
+            setReferencePoint(ApDataManager.getInstance().fingerprint.get(0), code);
         }
     }
+
     @SuppressLint("DefaultLocale")
     private void setReferencePoint(ReferencePoint referencePoint){
+        setReferencePoint(referencePoint, ApDataManager.UNCERTAIN_CHANGED);
+    }
+
+    @SuppressLint("DefaultLocale")
+    private void setReferencePoint(ReferencePoint referencePoint, int code){
         int index = getReferencePointIndex(referencePoint);
 
         if (index == -1) return;
@@ -285,7 +299,7 @@ public class ContentDebugView extends ScrollView {
 
         txtReferencePoint.setText(String.format("%s (%.2f, %.2f)", compareReferencePoint.name, compareReferencePoint.coordinateX, compareReferencePoint.coordinateY));
 
-        refresh();
+        refresh(code);
     }
 
     private int getReferencePointIndex(ReferencePoint rp){
@@ -302,8 +316,6 @@ public class ContentDebugView extends ScrollView {
 
     public void displayWifiResult(){
         hideAllInfo();
-
-        System.out.println("HI");
 
         if (ApDataManager.getInstance().results == null) return;
 

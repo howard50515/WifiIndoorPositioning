@@ -3,9 +3,9 @@ package com.example.wifiindoorpositioning.manager;
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.AssetManager;
+import android.widget.LinearLayout;
 
 import com.example.wifiindoorpositioning.R;
-import com.example.wifiindoorpositioning.datatype.ReferencePoint;
 import com.example.wifiindoorpositioning.datatype.TestPoint;
 
 import com.example.wifiindoorpositioning.datatype.TestPointInfo;
@@ -71,7 +71,8 @@ public class ConfigManager {
 
     public int k = 4;
     public int referencePointRadius = 50, actualPointRadius = 50, predictPointRadius = 50;
-    public boolean displayReferencePoint = true;
+    public boolean isDebugMode = true;
+    public LinearLayout debugView;
 
     public String[] resultHistories;
     public String[] apValues;

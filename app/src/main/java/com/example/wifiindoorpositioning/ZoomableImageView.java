@@ -24,7 +24,6 @@ import androidx.annotation.Nullable;
 
 import com.example.wifiindoorpositioning.datatype.DistanceInfo;
 import com.example.wifiindoorpositioning.datatype.ReferencePoint;
-import com.example.wifiindoorpositioning.datatype.TestPoint;
 import com.example.wifiindoorpositioning.manager.ApDataManager;
 import com.example.wifiindoorpositioning.manager.ConfigManager;
 
@@ -374,7 +373,7 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
         float scaleY = 1f;
 
         float pointRadius = configManager.referencePointRadius * coordinateDensityScalar * values[0];
-        if (configManager.displayReferencePoint && drawPoints != null){
+        if (configManager.isDebugMode && drawPoints != null){
             for (ReferencePoint rp : drawPoints){
                 float screenX = rp.coordinateX * scaleX * coordinateDensityScalar * values[0] + values[2];
                 float screenY = rp.coordinateY * scaleY * coordinateDensityScalar * values[4] + values[5];
@@ -408,10 +407,12 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
         canvas.drawColor(Color.TRANSPARENT);
         canvas.drawCircle(x, y, configManager.predictPointRadius * coordinateDensityScalar * values[0], circlePaint);
 
-        float fingerX = fingerPoint.x * scaleX * coordinateDensityScalar * values[0] + values[2];
-        float fingerY = fingerPoint.y * scaleY * coordinateDensityScalar * values[4] + values[5];
+        if (configManager.isDebugMode){
+            float fingerX = fingerPoint.x * scaleX * coordinateDensityScalar * values[0] + values[2];
+            float fingerY = fingerPoint.y * scaleY * coordinateDensityScalar * values[4] + values[5];
 
-        canvas.drawCircle(fingerX, fingerY, configManager.actualPointRadius * coordinateDensityScalar * values[0], fingerPaint);
+            canvas.drawCircle(fingerX, fingerY, configManager.actualPointRadius * coordinateDensityScalar * values[0], fingerPaint);
+        }
     }
 
 

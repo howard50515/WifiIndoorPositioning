@@ -2,6 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/mainActivityRootView"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -25,7 +26,7 @@
             android:layout_height="match_parent"
             android:gravity="center"
             android:layout_weight="1.2"
-            android:text="方位" android:textSize="16sp" android:textColor="@color/black" />
+            android:text="方位" android:textSize="16sp"/>
 
         <com.example.wifiindoorpositioning.HighlightButton
             android:id="@+id/btScan"
@@ -34,7 +35,7 @@
             android:layout_weight="1.2"
             android:background="@drawable/background_rectangle_transparent_unfocus"
             app:backgroundTint="@null"
-            android:text="開始掃描" android:textSize="16sp" android:textColor="@color/black" />
+            android:text="開始掃描" android:textSize="16sp"/>
 
         <TextView
             android:id="@+id/txtStatus"
@@ -42,7 +43,7 @@
             android:layout_height="match_parent"
             android:layout_weight="1.2"
             android:gravity="center"
-            android:text="掃描結果" android:textSize="16sp" android:textColor="@color/black" />
+            android:text="掃描結果" android:textSize="16sp"/>
 
         <com.example.wifiindoorpositioning.HighlightButton
             android:id="@+id/btSettings"
@@ -51,7 +52,7 @@
             android:layout_weight="0.8"
             android:background="@drawable/background_rectangle_transparent_unfocus"
             app:backgroundTint="@null"
-            android:text="設定" android:textSize="16sp" android:textColor="@color/black" />
+            android:text="設定" android:textSize="16sp"/>
 
     </LinearLayout>
 
@@ -64,88 +65,109 @@
         android:src="@drawable/e1_1" />
 
     <LinearLayout
+        android:id="@+id/debugView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingTop="5dp"
-        android:paddingBottom="5dp" >
+        android:orientation="vertical" >
 
-        <TextView
-            android:id="@+id/txtDistance"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:gravity="center"
-            android:layout_weight="1"
-            android:text="暫留" android:textSize="16sp" android:textColor="@color/black" />
-
-        <Spinner
-            android:id="@+id/debugModeSpinner"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:gravity="center"
-            android:layout_weight="1"
-            android:entries="@array/displayMode"
-            android:textSize="30sp" />
-
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-
-        <Spinner
-            android:id="@+id/apValueModeSpinner"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:gravity="center"
-            android:layout_weight="1.5"
-            android:textSize="30sp" />
-
-        <Spinner
-            android:id="@+id/highlightModeSpinner"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:gravity="center"
-            android:layout_weight="1"
-            android:textSize="16sp" />
-
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingTop="5dp"
-        android:paddingBottom="5dp"
-        android:background="@drawable/background_stroke_bottom" >
-
-        <Spinner
-            android:id="@+id/resultHistoriesSpinner"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:textSize="16sp" />
-
-        <Spinner
-            android:id="@+id/displayModeSpinner"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:gravity="center"
-            android:layout_weight="0"
-            android:textSize="16sp" />
-
-        <Spinner
-            android:id="@+id/weightModeSpinner"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center"
-            android:layout_weight="1"
-            android:textSize="16sp" />
+            android:orientation="horizontal"
+            android:paddingTop="5dp"
+            android:paddingBottom="5dp" >
+
+            <Spinner
+                android:id="@+id/testPointSpinner"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:textAlignment="center" />
+
+            <TextView
+                android:id="@+id/txtTestPoint"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1.2"
+                android:gravity="center"
+                android:text="測試點" />
+
+            <Spinner
+                android:id="@+id/debugModeSpinner"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:layout_weight="1"
+                android:entries="@array/displayMode" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="5dp"
+            android:paddingBottom="5dp" >
+
+            <Spinner
+                android:id="@+id/apValueModeSpinner"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:layout_weight="1.5" />
+
+            <Spinner
+                android:id="@+id/highlightModeSpinner"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:layout_weight="1" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="5dp"
+            android:paddingBottom="5dp"
+            android:background="@drawable/background_stroke_bottom" >
+
+            <Spinner
+                android:id="@+id/resultHistoriesSpinner"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1" />
+
+            <Spinner
+                android:id="@+id/displayModeSpinner"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:layout_weight="0" />
+
+            <Spinner
+                android:id="@+id/weightModeSpinner"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:layout_weight="1" />
+
+            <com.example.wifiindoorpositioning.HighlightButton
+                android:id="@+id/btCopy"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.6"
+                android:background="@drawable/background_rectangle_transparent_unfocus"
+                app:backgroundTint="@null"
+                android:text="複製" android:textSize="16sp" />
+
+        </LinearLayout>
+
+        <com.example.wifiindoorpositioning.ContentDebugView
+            android:id="@+id/contentView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
 
     </LinearLayout>
-
-    <com.example.wifiindoorpositioning.ContentDebugView
-        android:id="@+id/contentView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
 
 </LinearLayout>
