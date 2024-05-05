@@ -28,6 +28,14 @@
             android:layout_weight="1.2"
             android:text="方位" android:textSize="16sp"/>
 
+        <TextView
+            android:id="@+id/txtMethodName"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:layout_weight="0"
+            android:text="方法" android:textSize="16sp" />
+
         <com.example.wifiindoorpositioning.HighlightButton
             android:id="@+id/btScan"
             android:layout_width="0dp"
@@ -166,7 +174,6 @@
             android:id="@+id/contentView"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
-
 
     </LinearLayout>
 

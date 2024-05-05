@@ -1,8 +1,6 @@
 package com.example.wifiindoorpositioning.manager;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
-import android.content.Context;
 import android.content.res.AssetManager;
 
 import com.example.wifiindoorpositioning.MainActivity;
@@ -25,9 +23,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.Random;
 import java.util.Set;
 
 public class ApDataManager {
@@ -45,6 +46,8 @@ public class ApDataManager {
     }
 
     public ArrayList<String> accessPoints;
+    public ArrayList<ArrayList<ReferencePoint>> positionClusters;
+    public ArrayList<ProtoCluster> signalClusters;
     public ArrayList<ReferencePoint> fingerprint;
     public ArrayList<WifiResult> originalResults;
     public ArrayList<WifiResult> results;
@@ -137,7 +140,10 @@ public class ApDataManager {
         return builder.toString();
     }
 
+    public String apValuesName;
+
     public void loadApValue(String valueName){
+        apValuesName = valueName;
         String apPath = apValuesDirectoryName + "/" + valueName + "/ap.txt";
         String apVectorPath = apValuesDirectoryName + "/" + valueName + "/ap_vector.txt";
 
@@ -166,9 +172,17 @@ public class ApDataManager {
 
         applyCoordinateToFingerPrint(fingerprint);
 
-        ArrayList<DistanceInfo> distances = getDistances(fingerprint, getVector(getSelectedApResults(originalResults, accessPoints), accessPoints));
+        ArrayList<ArrayList<ReferencePoint>> positionCluster = getCoordinateClustering(fingerprint);
 
-        ArrayList<DistanceInfo> highlights = getHighlights(distances, ConfigManager.getInstance().k, highlightFunction);
+        ArrayList<ProtoCluster> signalCluster = getSignalClustering(fingerprint, positionCluster);
+
+        ArrayList<Float> ssids = getVector(getSelectedApResults(originalResults, accessPoints), accessPoints);
+
+        ArrayList<ReferencePoint> nearestRps = getNearestClusterRps(signalCluster, ssids);
+
+        ArrayList<DistanceInfo> distances = getDistances(nearestRps, ssids);
+
+        ArrayList<DistanceInfo> highlights = getHighlights(distances, ConfigManager.getInstance().kNearest, highlightFunction);
 
         ArrayList<Float> weights = getWeights(highlights, weightFunction);
 
@@ -177,25 +191,76 @@ public class ApDataManager {
         return getPredictCoordinate(highlights);
     }
 
+    public ArrayList<ApDistanceInfo> getCoordinateWithValues(String apValueName){
+        String apPath = apValuesDirectoryName + "/" + apValueName + "/ap.txt";
+        String apVectorPath = apValuesDirectoryName + "/" + apValueName + "/ap_vector.txt";
+
+        if (originalResults == null) return null;
+
+        ArrayList<String> accessPoints = loadAccessPoints(assetManager, apPath);
+
+        ArrayList<ReferencePoint> fingerprint = loadFingerPrint(assetManager, apVectorPath);
+
+        applyCoordinateToFingerPrint(fingerprint);
+
+        ArrayList<ArrayList<ReferencePoint>> positionCluster = getCoordinateClustering(fingerprint);
+
+        ArrayList<ProtoCluster> signalCluster = getSignalClustering(fingerprint, positionCluster);
+
+        ArrayList<Float> ssids = getVector(getSelectedApResults(originalResults, accessPoints), accessPoints);
+
+        ArrayList<ReferencePoint> nearestRps = getNearestClusterRps(signalCluster, ssids);
+
+        ArrayList<DistanceInfo> distances = getDistances(nearestRps, ssids);
+
+        ConfigManager configManager = ConfigManager.getInstance();
+        HashMap<String, HighlightFunction> highlightFunctions = configManager.highlightFunctions;
+        HashMap<String, WeightFunction> weightFunctions = configManager.weightFunctions;
+        ArrayList<String> highlightNames = configManager.getAllEnableHighlightFunctionNames();
+        ArrayList<String> weightNames = configManager.getAllEnableWeightFunctionNames();
+
+        ArrayList<ApDistanceInfo> apDistances = new ArrayList<>();
+        int k = ConfigManager.getInstance().kNearest;
+        for (String highlightName : highlightNames){
+            for (String weightName : weightNames){
+                ArrayList<DistanceInfo> highlights = getHighlights(distances, k, highlightFunction);
+
+                ArrayList<Float> weights = getWeights(highlights, weightFunction);
+
+                setHighlightWeights(highlights, weights);
+
+                apDistances.add(new ApDistanceInfo(apValueName, highlightName, weightName,
+                        getCoordinateWithValues(apValueName, highlightFunctions.get(highlightName), weightFunctions.get(weightName))));
+            }
+        }
+
+        return apDistances;
+    }
+
     public ArrayList<ApDistanceInfo> getAllApDistances(){
         if (originalResults == null) return null;
 
         ArrayList<ApDistanceInfo> apDistances = new ArrayList<>();
 
         ConfigManager configManager = ConfigManager.getInstance();
-        HashMap<String, HighlightFunction> highlightFunctions = configManager.highlightFunctions;
-        HashMap<String, WeightFunction> weightFunctions = configManager.weightFunctions;
         ArrayList<String> apValueNames = configManager.getAllEnableApValueNames();
-        ArrayList<String> highlightNames = configManager.getAllEnableHighlightFunctionNames();
-        ArrayList<String> weightNames = configManager.getAllEnableWeightFunctionNames();
+
+//        HashMap<String, HighlightFunction> highlightFunctions = configManager.highlightFunctions;
+//        HashMap<String, WeightFunction> weightFunctions = configManager.weightFunctions;
+//        ArrayList<String> highlightNames = configManager.getAllEnableHighlightFunctionNames();
+//        ArrayList<String> weightNames = configManager.getAllEnableWeightFunctionNames();
+//
+//        for (String apValueName : apValueNames){
+//            for (String highlightName : highlightNames){
+//                for (String weightName : weightNames){
+//                    apDistances.add(new ApDistanceInfo(apValueName, highlightName, weightName,
+//                            getCoordinateWithValues(apValueName, highlightFunctions.get(highlightName), weightFunctions.get(weightName))));
+//                }
+//            }
+//        }
 
         for (String apValueName : apValueNames){
-            for (String highlightName : highlightNames){
-                for (String weightName : weightNames){
-                    apDistances.add(new ApDistanceInfo(apValueName, highlightName, weightName,
-                            getCoordinateWithValues(apValueName, highlightFunctions.get(highlightName), weightFunctions.get(weightName))));
-                }
-            }
+            apDistances.addAll(getCoordinateWithValues(apValueName));
         }
 
         return apDistances;
@@ -217,6 +282,266 @@ public class ApDataManager {
         }
     }
 
+    public static ArrayList<ArrayList<ReferencePoint>> getCoordinateClustering(ArrayList<ReferencePoint> rps){
+        int kMeans = ConfigManager.getInstance().kMeans;
+        Random rng = new Random(123);
+
+        ArrayList<Coordinate> means = new ArrayList<>();
+        int gap = rps.size() / kMeans;
+        for (int i = 0; i < kMeans; i++){
+            int index = rng.nextInt(gap) + gap * i;
+
+            Coordinate coordinate = new Coordinate(rps.get(index).coordinateX, rps.get(index).coordinateY);
+
+            means.add(coordinate);
+        }
+
+        int count = 0;
+        ArrayList<ArrayList<ReferencePoint>> clusters;
+        do {
+            clusters = new ArrayList<>();
+
+            for (int i = 0; i < kMeans; i++) {
+                clusters.add(new ArrayList<>());
+            }
+
+            for (int i = 0; i < rps.size(); i++) {
+                ReferencePoint rp = rps.get(i);
+
+                float minDis = Float.MAX_VALUE;
+                int clusterIndex = 0;
+                for (int j = 0; j < kMeans; j++) {
+                    Coordinate coordinate = means.get(j);
+                    float x = coordinate.x - rp.coordinateX;
+                    float y = coordinate.y - rp.coordinateY;
+
+                    float dis = (float) Math.sqrt(x * x + y * y);
+
+                    if (minDis > dis) {
+                        minDis = dis;
+                        clusterIndex = j;
+                    }
+                }
+
+                clusters.get(clusterIndex).add(rp);
+            }
+
+            boolean hasChange = false;
+            for (int i = 0; i < clusters.size(); i++) {
+                Coordinate coordinate = means.get(i);
+                ArrayList<ReferencePoint> clusterRps = clusters.get(i);
+
+                float sumX = 0;
+                float sumY = 0;
+                for (int k = 0; k < clusterRps.size(); k++) {
+                    ReferencePoint clusterRp = clusterRps.get(k);
+
+                    sumX += clusterRp.coordinateX;
+                    sumY += clusterRp.coordinateY;
+                }
+
+                float avgX = sumX / clusterRps.size();
+                float avgY = sumY / clusterRps.size();
+
+                if (coordinate.x != avgX || coordinate.y != avgY){
+                    hasChange = true;
+                }
+                coordinate.x = avgX;
+                coordinate.y = avgY;
+            }
+
+            if (!hasChange){
+                // System.out.println("break at: " + count);
+                break;
+            }
+
+            count++;
+
+        } while (count <= 10);
+
+        return clusters;
+    }
+
+    public static ArrayList<ArrayList<ReferencePoint>> getVectorClustering(ArrayList<String> accessPoints, ArrayList<ReferencePoint> rps){
+        int kMeans = ConfigManager.getInstance().kMeans;
+        Random rng = new Random(123);
+
+        ArrayList<float[]> means = new ArrayList<>();
+        for (int i = 0; i < kMeans; i++){
+            float[] mean = new float[accessPoints.size()];
+
+            for (int j = 0; j < accessPoints.size(); j++){
+                mean[j] = rng.nextFloat() % 100f - 100;
+            }
+
+            means.add(mean);
+        }
+
+        int count = 0;
+        ArrayList<ArrayList<ReferencePoint>> clusters;
+        do {
+            clusters = new ArrayList<>();
+
+            for (int i = 0; i < kMeans; i++) {
+                clusters.add(new ArrayList<>());
+            }
+
+            for (int i = 0; i < rps.size(); i++) {
+                ReferencePoint rp = rps.get(i);
+                ArrayList<Float> vector = rp.vector;
+
+                float minDis = Float.MAX_VALUE;
+                int clusterIndex = 0;
+                for (int j = 0; j < kMeans; j++) {
+                    float[] mean = means.get(j);
+
+                    float sum = 0;
+                    for (int k = 0; k < vector.size(); k++) {
+                        float diff = vector.get(k) - mean[k];
+
+                        sum += diff * diff;
+                    }
+
+                    float dis = (float) Math.sqrt(sum);
+
+                    if (minDis > dis) {
+                        minDis = dis;
+                        clusterIndex = j;
+                    }
+                }
+
+                clusters.get(clusterIndex).add(rp);
+            }
+
+            for (int i = 0; i < clusters.size(); i++) {
+                float[] mean = means.get(i);
+                ArrayList<ReferencePoint> clusterRps = clusters.get(i);
+
+                for (int j = 0; j < mean.length; j++) {
+                    float sum = 0;
+                    for (int k = 0; k < clusterRps.size(); k++) {
+                        ReferencePoint clusterRp = clusterRps.get(k);
+
+                        sum += clusterRp.vector.get(j);
+                    }
+
+                    float avg = sum / clusterRps.size();
+
+                    mean[j] = avg;
+                }
+            }
+
+            count++;
+
+        } while (count <= 10);
+
+        return clusters;
+    }
+
+    public static ArrayList<ProtoCluster> getSignalClustering(ArrayList<ReferencePoint> rps, ArrayList<ArrayList<ReferencePoint>> positionCluster){
+        int k = ConfigManager.getInstance().kMeans;
+        int q = ConfigManager.getInstance().qClusterNum;
+        Random rng = new Random(123);
+
+        if (k > q){
+            throw new RuntimeException("q must equals or greater than k");
+        }
+
+        int randomSelectNum = q - k;
+
+        ArrayList<Integer> labels = new ArrayList<>();
+        ArrayList<ProtoCluster> protoVectors = new ArrayList<>();
+        for (int i = 0; i < k; i++){
+            int rpIndex = rng.nextInt(positionCluster.get(i).size());
+
+            labels.add(i);
+            protoVectors.add(new ProtoCluster(new ArrayList<>(), new ArrayList<>(positionCluster.get(i).get(rpIndex).vector)));
+        }
+
+        for (int i = 0; i < randomSelectNum; i++){
+            int clusterIndex = rng.nextInt(positionCluster.size());
+            int rpIndex = rng.nextInt(positionCluster.get(clusterIndex).size());
+
+            labels.add(clusterIndex);
+            protoVectors.add(new ProtoCluster(new ArrayList<>(), new ArrayList<>(positionCluster.get(clusterIndex).get(rpIndex).vector)));
+        }
+
+        long t = System.currentTimeMillis();
+
+        int iterationCount = 0;
+        float learningRate = 0.1f;
+        do {
+            int signalClusterIndex = rng.nextInt(protoVectors.size());
+            int positionClusterIndex = labels.get(signalClusterIndex);
+            int rpIndex = rng.nextInt(positionCluster.get(positionClusterIndex).size());
+
+
+            ReferencePoint rp = positionCluster.get(positionClusterIndex).get(rpIndex);
+            ArrayList<Float> vector = rp.vector;
+
+            float minDis = Float.MAX_VALUE;
+            int minProtoVectorIndex = 0;
+            for (int i = 0; i < protoVectors.size(); i++) {
+                ArrayList<Float> protoVector = protoVectors.get(i).vector;
+
+                float sum = 0;
+                for (int j = 0; j < protoVector.size(); j++) {
+                    float diff = protoVector.get(j) - vector.get(j);
+
+                    sum += diff * diff;
+                }
+
+                float dis = (float) Math.sqrt(sum);
+
+                if (minDis > dis) {
+                    minDis = dis;
+                    minProtoVectorIndex = i;
+                }
+            }
+
+            ArrayList<Float> minProtoVector = protoVectors.get(minProtoVectorIndex).vector;
+
+            float sameCluster = positionClusterIndex == labels.get(minProtoVectorIndex) ? 1f : -1f;
+            for (int i = 0; i < minProtoVector.size(); i++) {
+                minProtoVector.set(i, minProtoVector.get(i) +
+                        sameCluster * (vector.get(i) - minProtoVector.get(i)) * learningRate);
+            }
+
+            iterationCount++;
+
+        } while (iterationCount <= 100);
+
+        System.out.println(System.currentTimeMillis() - t);
+
+        for (ReferencePoint rp : rps){
+            ArrayList<Float> vector = rp.vector;
+
+            float minDis = Float.MAX_VALUE;
+            int minProtoVector = 0;
+            for (int i = 0; i < protoVectors.size(); i++){
+                ArrayList<Float> protoVector = protoVectors.get(i).vector;
+
+                float sum = 0;
+                for (int j = 0; j < protoVector.size(); j++){
+                    float diff = protoVector.get(j) - vector.get(j);
+
+                    sum += diff * diff;
+                }
+
+                float dis = (float) Math.sqrt(sum);
+
+                if (minDis > dis){
+                    minDis = dis;
+                    minProtoVector = i;
+                }
+            }
+
+            protoVectors.get(minProtoVector).rps.add(rp);
+        }
+
+        return protoVectors;
+    }
+
     public static ArrayList<Float> getVector(ArrayList<WifiResult> results, ArrayList<String> accessPoints){
         ArrayList<Float> ssids = new ArrayList<>(accessPoints.size());
         for (int i = 0; i < accessPoints.size(); i++){
@@ -235,22 +560,74 @@ public class ApDataManager {
         return ssids;
     }
 
+    public static ArrayList<ReferencePoint> getNearestClusterRps(ArrayList<ProtoCluster> signalCluster, ArrayList<Float> ssids){
+//        float minDis = Float.MAX_VALUE;
+//        int minClusterIndex = 0;
+        IntFloatPair[] distances = new IntFloatPair[signalCluster.size()];
+        for (int i = 0; i < signalCluster.size(); i++){
+            ArrayList<Float> protoVector = signalCluster.get(i).vector;
+
+            float sum = 0;
+            for (int j = 0; j < protoVector.size(); j++){
+                float diff = protoVector.get(j) - ssids.get(j);
+
+                sum += diff * diff;
+            }
+
+            float dis = (float) Math.sqrt(sum);
+
+            distances[i] = new IntFloatPair(i, dis);
+
+            ArrayList<ReferencePoint> rps = signalCluster.get(i).rps;
+            System.out.print(dis + " with: ");
+            for (int j = 0; j < rps.size(); j++){
+                System.out.print(rps.get(j).name + " ");
+            }
+            System.out.println();
+
+//            if (minDis > dis){
+//                minDis = dis;
+//                minClusterIndex = i;
+//            }
+        }
+
+        Arrays.sort(distances, (intFloatPair, t1) -> Float.compare(intFloatPair.floatVal, t1.floatVal));
+
+        float minDis = distances[0].floatVal;
+        ArrayList<ReferencePoint> rps = new ArrayList<>(signalCluster.get(distances[0].intVal).rps);
+
+        if (signalCluster.size() > 1){
+            float secDis = distances[1].floatVal;
+
+            if (secDis / minDis < 1.4f){
+                rps.addAll(signalCluster.get(distances[1].intVal).rps);
+            }
+        }
+
+        return rps;
+        // return signalCluster.get(minClusterIndex).rps;
+    }
+
+    private static class IntFloatPair{
+        int intVal;
+        float floatVal;
+
+        public IntFloatPair(int intVal, float floatVal){
+            this.intVal = intVal;
+            this.floatVal = floatVal;
+        }
+    }
+
     public static ArrayList<WifiResult> getSelectedApResults(ArrayList<WifiResult> results, ArrayList<String> accessPoints){
         ArrayList<WifiResult> output = new ArrayList<>();
 
         for (String apName : accessPoints){
             WifiResult r = null;
 
-            //TODO 標示為不合法level，暫時性的移除NCUCE_2.4G的影響
-            if (apName.contains("NCUCE_2.4G:")){
-                r = new WifiResult(apName, -200);
-            }
-            else{
-                for (WifiResult result : results){
-                    if (result.apId.equals(apName)){
-                        r = result;
-                        break;
-                    }
+            for (WifiResult result : results){
+                if (result.apId.equals(apName)){
+                    r = result;
+                    break;
                 }
             }
 
@@ -274,10 +651,6 @@ public class ApDataManager {
             int foundNum = 0;
 
             for (int j = 0; j < rp.vector.size(); j++){
-                //TODO 檢測不合法level，暫時性的移除NCUCE_2.4G的影響
-                if (ssids.get(j) == -200)
-                    continue;
-
                 if (rp.vector.get(j) != -100){
                     pastFoundNum++;
 
@@ -329,9 +702,15 @@ public class ApDataManager {
         //new Thread(() ->{
             this.results = getSelectedApResults(originalResults, accessPoints);
 
+            positionClusters = getCoordinateClustering(fingerprint);
+
+            signalClusters = getSignalClustering(fingerprint, positionClusters);
+
             ArrayList<Float> ssids = getVector(results, accessPoints);
 
-            ArrayList<DistanceInfo> distances = getDistances(fingerprint, ssids);
+            ArrayList<ReferencePoint> nearestRps = getNearestClusterRps(signalClusters, ssids);
+
+            ArrayList<DistanceInfo> distances = getDistances(nearestRps, ssids);
 
             this.originalDistances = new ArrayList<>(distances);
 
@@ -352,7 +731,7 @@ public class ApDataManager {
             resetDistancesWeight();
 
             this.displayDistances = getDisplays(originalDistances, displayFunction);
-            this.highlightDistances = getHighlights(originalDistances, ConfigManager.getInstance().k, highlightFunction);
+            this.highlightDistances = getHighlights(originalDistances, ConfigManager.getInstance().kNearest, highlightFunction);
 
             setHighlightWeights(highlightDistances, getWeights(highlightDistances, weightFunction));
         }
@@ -377,7 +756,7 @@ public class ApDataManager {
     }
 
     public static ArrayList<DistanceInfo> getHighlights(ArrayList<DistanceInfo> distances, int k, HighlightFunction function){
-        return function.highlight(distances, k);
+        return function.highlight(distances, Math.min(distances.size(), k));
     }
 
     public static ArrayList<DistanceInfo> getDisplays(ArrayList<DistanceInfo> distances, DisplayFunction function){
@@ -476,6 +855,11 @@ public class ApDataManager {
         refresh(WEIGHT_FUNCTION_CHANGED);
     }
 
+
+    public String getCurrentMethodName(){
+        return String.format("%s/%s/%s", apValuesName, highlightFunctionName, weightFunctionName);
+    }
+
     public int getCurrentHighlightFunctionIndex(){
         return ConfigManager.getInstance().getHighlightFunctionIndex(highlightFunctionName);
     }
@@ -500,5 +884,15 @@ public class ApDataManager {
     }
 
     //endregion
+
+    public static class ProtoCluster{
+        public ArrayList<ReferencePoint> rps;
+        public ArrayList<Float> vector;
+
+        public ProtoCluster(ArrayList<ReferencePoint> rps, ArrayList<Float> vector){
+            this.rps = rps;
+            this.vector = vector;
+        }
+    }
 }
 

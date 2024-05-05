@@ -65,7 +65,6 @@ public class ContentDebugView extends ScrollView {
         body = findViewById(R.id.body);
         apDistanceInfoControlPanel = findViewById(R.id.apDistanceInfoControlPanel);
         wifiResultControlPanel= findViewById(R.id.wifiResultControlPanel);
-        // testPointSpinner = findViewById(R.id.testPointSpinner1);
         referencePointSpinner = findViewById(R.id.referencePointSpinner);
         txtTestPoint = findViewById(R.id.txtTestPoint);
         txtReferencePoint = findViewById(R.id.txtReferencePoint);
@@ -81,25 +80,7 @@ public class ContentDebugView extends ScrollView {
 
         body.addView(txtWait);
 
-//        testPointSpinner.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().getAllTestPointNames()));
-//        testPointSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-//            @Override
-//            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-//                if (ignoreChanged){
-//                    ignoreChanged = false;
-//                }
-//                else{
-//                    ignoreChanged = true;
-//
-//                    setTestPoint(ConfigManager.getInstance().getTestPointAtIndex(testPointSpinner.getSelectedItemPosition()));
-//                }
-//            }
-//
-//            @Override
-//            public void onNothingSelected(AdapterView<?> adapterView) {
-//
-//            }
-//        });
+        if (isInEditMode()) return;
 
         setReferencePoints();
         setReferencePoint(ApDataManager.getInstance().fingerprint.get(0));
@@ -161,20 +142,8 @@ public class ContentDebugView extends ScrollView {
 
         txtTestPoint.setText(String.format("%s\n(%.2f, %.2f)", testPoint.name, testPoint.coordinateX, testPoint.coordinateY));
 
-//        if (ignoreChanged) {
-//            ignoreChanged = false;
-//        }
-//        else if (!testPoint.name.equals(testPointSpinner.getSelectedItem())){
-//            testPointSpinner.setSelection(ConfigManager.getInstance().getTestPointIndex(testPoint.name));
-//            ignoreChanged = true;
-//        }
-
         refresh(ApDataManager.TEST_POINT_CHANGED);
-
-        // if (listener != null) listener.pointChange(testPoint.coordinateX, testPoint.coordinateY);
     }
-
-    // private boolean ignoreChanged = false;
 
     public void setTestPoint(float x, float y){
         setTestPoint(new TestPoint("自定義", x, y));
@@ -334,9 +303,6 @@ public class ContentDebugView extends ScrollView {
         results.sort((lhs, rhs) -> -Float.compare(Math.abs(lhs.level - lhs.rpLevel), Math.abs(rhs.level - rhs.rpLevel)));
 
         for (int i = 0; i < results.size(); i++){
-            if (results.get(i).apId.contains("NCUCE_2.4G:"))
-                continue;
-
             if (displayViews.size() <= i) {
                 InfoDisplayView displayView = addInitInfoDisplayView();
                 displayView.setInfo(results.get(i));
@@ -457,17 +423,8 @@ public class ContentDebugView extends ScrollView {
         return displayView;
     }
 
-    private OnTestPointChangedListener listener;
-
-    public void setOnTestPointChangedListener(OnTestPointChangedListener listener){
-        this.listener = listener;
-    }
-
-    public interface OnTestPointChangedListener{
-        void pointChange(float x, float y);
-    }
-
-    public class TPInfo{
+    //region TPInfo
+    public static class TPInfo{
         // 測試點資訊
         public TestPoint testPoint;
 
@@ -500,7 +457,7 @@ public class ContentDebugView extends ScrollView {
         }
     }
 
-    public class TestPointApInfo{
+    public static class TestPointApInfo{
         public String apValueName;
 
         public ArrayList<TestPointFunctionInfo> functions;
@@ -512,7 +469,7 @@ public class ContentDebugView extends ScrollView {
         }
     }
 
-    public class TestPointFunctionInfo{
+    public static class TestPointFunctionInfo{
         public final String[] names = new String[2];
         public transient String highlightFunctionName, weightFunctionName;
 
@@ -542,4 +499,5 @@ public class ContentDebugView extends ScrollView {
             return lhs.weightFunctionName.compareTo(rhs.weightFunctionName);
         }
     };
+    //endregion
 }

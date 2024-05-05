@@ -15,6 +15,7 @@ import com.example.wifiindoorpositioning.function.HighlightFunction;
 import com.example.wifiindoorpositioning.function.WeightFunction;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
@@ -69,9 +70,9 @@ public class ConfigManager {
 
     public final static String resultHistoriesDirectoryName = "results_history";
 
-    public int k = 4;
+    public int kNearest = 4, kMeans = 7, qClusterNum = 7;
     public int referencePointRadius = 50, actualPointRadius = 50, predictPointRadius = 50;
-    public boolean isDebugMode = true;
+    public boolean isDebugMode = true, displayClustering = true;
     public LinearLayout debugView;
 
     public String[] resultHistories;

@@ -3,6 +3,7 @@ package com.example.wifiindoorpositioning;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
+import android.content.res.Configuration;
 import android.graphics.PointF;
 import android.os.Bundle;
 import android.view.View;
@@ -28,10 +29,10 @@ import com.example.wifiindoorpositioning.manager.SystemServiceManager;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
-    public  LinearLayout debugView;
+    private LinearLayout debugView;
     private LinearLayout rootView;
     private ImageView imgCompass;
-    private TextView txtOrientation, txtStatus, txtDistance;
+    private TextView txtOrientation, txtStatus, txtDistance, txtMethodName;
     private ZoomableImageView mapImage;
     private Spinner debugModeSpinner, apValueModeSpinner, highlightModeSpinner, displayModeSpinner, weightModeSpinner, resultHistoriesSpinner, testPointSpinner;
     private ContentDebugView contentView;
@@ -55,6 +56,7 @@ public class MainActivity extends AppCompatActivity {
         txtOrientation = findViewById(R.id.orientation);
         txtStatus = findViewById(R.id.txtStatus);
         txtDistance = findViewById(R.id.txtTestPoint);
+        txtMethodName = findViewById(R.id.txtMethodName);
         mapImage = findViewById(R.id.zoomableView);
         btScan = findViewById(R.id.btScan);
         btSettings = findViewById(R.id.btSettings);
@@ -177,7 +179,7 @@ public class MainActivity extends AppCompatActivity {
 
                 return new ArrayList<>(sortDistances.subList(0, Math.min(k, sortDistances.size())));
             }
-        });
+        }, false);
         ConfigManager.getInstance().addWeightFunction("自訂權重", highlights -> {
             ArrayList<Float> weights = new ArrayList<>();
             if (highlights.size() == 0) return weights;
@@ -228,7 +230,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             return weights;
-        });
+        }, false);
         ConfigManager.getInstance().addWeightFunction("WKNN", new WeightFunction() {
             @Override
             public ArrayList<Float> weight(ArrayList<DistanceInfo> highlights) {
@@ -305,11 +307,11 @@ public class MainActivity extends AppCompatActivity {
         });
 
         apValueModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().apValues));
-        resultHistoriesSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().getResultHistoriesName()));
         highlightModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().getAllHighlightFunctionNames()));
         displayModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().getAllDisplayFunctionNames()));
         weightModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().getAllWeightFunctionNames()));
         testPointSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().getAllTestPointNames()));
+        resultHistoriesSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().getResultHistoriesName()));
 
         highlightModeSpinner.setSelection(ApDataManager.getInstance().getCurrentHighlightFunctionIndex());
         displayModeSpinner.setSelection(ApDataManager.getInstance().getCurrentDisplayFunctionIndex());
@@ -319,7 +321,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
                 ApDataManager.getInstance().loadApValueAtIndex(apValueModeSpinner.getSelectedItemPosition());
-                mapImage.setReferencePoints(ApDataManager.getInstance().fingerprint);
+
+                txtMethodName.setText(ApDataManager.getInstance().getCurrentMethodName());
             }
 
             @Override
@@ -331,6 +334,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
                 ApDataManager.getInstance().setHighlightFunction(highlightModeSpinner.getSelectedItem().toString());
+
+                txtMethodName.setText(ApDataManager.getInstance().getCurrentMethodName());
             }
 
             @Override
@@ -353,6 +358,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
                 ApDataManager.getInstance().setWeightFunction(weightModeSpinner.getSelectedItem().toString());
+
+                txtMethodName.setText(ApDataManager.getInstance().getCurrentMethodName());
             }
 
             @Override
@@ -425,12 +432,6 @@ public class MainActivity extends AppCompatActivity {
         });
 
         contentView.setMainActivity(this);
-//        contentView.setOnTestPointChangedListener(new ContentDebugView.OnTestPointChangedListener() {
-//            @Override
-//            public void pointChange(float x, float y) {
-//                mapImage.setFingerPoint(x, y);
-//            }
-//        });
 
         btScan.setOnButtonDownListener(() -> {
             txtStatus.setText("掃描中...");
@@ -458,20 +459,12 @@ public class MainActivity extends AppCompatActivity {
         btSettings.setOnButtonDownListener(() -> settingsView.showView(this));
         btCopy.setOnButtonDownListener(() -> SystemServiceManager.getInstance().toClipBoard(ApDataManager.getInstance().originalResults));
 
-        ConfigManager.getInstance().registerOnConfigChangedListener(new ConfigManager.OnConfigChangedListener() {
-            @Override
-            public void onConfigChanged() {
-                if (!ConfigManager.getInstance().isDebugMode){
-                    rootView.removeView(debugView);
-                }
-                else{
-                    ViewGroup parent = (ViewGroup) debugView.getParent();
-                    if (parent != null)
-                        parent.removeView(debugView);
-                    rootView.addView(debugView);
-                }
-            }
-        });
+        // setConfiguration();
+        setDebugView();
+        ConfigManager.getInstance().registerOnConfigChangedListener(this::setDebugView);
+
+//        System.out.println(txtMethodName.getVisibility());
+//        System.out.println(txtMethodName.getText());
 
         SystemServiceManager.getInstance().setOnOrientationChangedListener(degree -> {
             imgCompass.setRotation(degree);
@@ -492,6 +485,38 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
+    }
+
+    private void setConfiguration(){
+        txtMethodName.setText(ApDataManager.getInstance().getCurrentMethodName());
+
+        if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE){
+            System.out.println("vis");
+        }
+        else{
+            ViewGroup parent = (ViewGroup) txtMethodName.getParent();
+            if (parent != null)
+                parent.removeView(txtMethodName);
+
+            rootView.addView(txtMethodName);
+        }
+    }
+
+    private void setDebugView(){
+        if (ConfigManager.getInstance().isDebugMode){
+            ViewGroup parent = (ViewGroup) debugView.getParent();
+            if (parent != null)
+                parent.removeView(debugView);
+            rootView.addView(debugView);
+
+//            if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT)
+//                txtMethodName.setVisibility(View.GONE);
+        }
+        else{
+            rootView.removeView(debugView);
+
+            // txtMethodName.setVisibility(View.VISIBLE);
+        }
     }
 
     public void setApValueFunctions(String apValueName, String highlightFunctionName, String weightFunctionName){

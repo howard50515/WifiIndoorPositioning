@@ -23,6 +23,6 @@ public class FirstKDistanceHighlightFunction implements HighlightFunction {
 
         copy.sort(DistanceInfo.distanceComparable);
 
-        return new ArrayList<>(copy.subList(0, usingK ? this.k : k));
+        return new ArrayList<>(copy.subList(0, usingK ? Math.min(distances.size(), this.k) : k));
     }
 }

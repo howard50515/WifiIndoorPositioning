@@ -23,21 +23,19 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" >
 
-                <TextView
+                <Spinner
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:gravity="center"
-                    android:layout_weight="1"
-                    android:text="參考點大小： "/>
+                    android:layout_weight="1" />
 
-                <EditText
-                    android:id="@+id/inputReferencePointRadius"
+                <CheckBox
+                    android:id="@+id/displayClustering"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:gravity="center"
-                    android:inputType="number"
                     android:layout_weight="1"
-                    android:hint="10" android:textSize="16sp" android:textColor="@color/black" />
+                    android:text="顯示分區" />
 
                 <CheckBox
                     android:id="@+id/displayReferencePoint"
@@ -51,40 +49,59 @@
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content" >
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" >
 
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:gravity="center"
-                    android:layout_weight="1.5"
+                    android:layout_weight="1"
+                    android:text="參考點大小： "/>
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:layout_weight="1"
                     android:text="預測點大小： "/>
 
-                <EditText
-                    android:id="@+id/inputPredictPointRadius"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:inputType="number"
-                    android:layout_weight="1"
-                    android:hint="10" android:textSize="16sp" android:textColor="@color/black" />
-
-
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:gravity="center"
-                    android:layout_weight="1.5"
+                    android:layout_weight="1"
                     android:text="實際點大小： "/>
 
-                <EditText
-                    android:id="@+id/inputActualPointRadius"
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" >
+
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/referencePointRadiusSlider"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:gravity="center"
-                    android:inputType="number"
                     android:layout_weight="1"
-                    android:hint="10" android:textSize="16sp" android:textColor="@color/black" />
+                    android:valueFrom="0" android:valueTo="100" android:stepSize="1" />
+
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/predictPointRadiusSlider"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:layout_weight="1"
+                    android:valueFrom="0" android:valueTo="100" android:stepSize="1" />
+
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/actualPointRadiusSlider"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:layout_weight="1"
+                    android:valueFrom="0" android:valueTo="100" android:stepSize="1" />
 
             </LinearLayout>
 
@@ -98,17 +115,53 @@
                     android:layout_height="match_parent"
                     android:gravity="center"
                     android:layout_weight="1"
-                    android:text="k： " android:textSize="16sp" android:textColor="@color/black" />
+                    android:text="取最近點數量： " />
 
-                <EditText
-                    android:id="@+id/inputK"
+                <TextView
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:gravity="center"
-                    android:inputType="number"
                     android:layout_weight="1"
-                    android:hint="4" android:textSize="16sp" android:textColor="@color/black" />
+                    android:text="距離分群數量：" />
 
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:layout_weight="1"
+                    android:text="訊號分群數量：" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" >
+
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/kNearestSlider"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:layout_weight="1"
+                    android:valueFrom="1" android:valueTo="6" android:stepSize="1" />
+
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/kMeansSlider"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:layout_weight="1"
+                    android:valueFrom="1" android:valueTo="8" android:stepSize="1" />
+
+
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/qClusterSlider"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:layout_weight="1"
+                    android:valueFrom="4" android:valueTo="12" android:stepSize="1" />
             </LinearLayout>
 
             <LinearLayout

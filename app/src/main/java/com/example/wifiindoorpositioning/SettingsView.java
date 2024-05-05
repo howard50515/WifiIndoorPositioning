@@ -10,12 +10,13 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 
 import com.example.wifiindoorpositioning.manager.ConfigManager;
+import com.google.android.material.slider.Slider;
 
 public class SettingsView extends LinearLayout {
     private final Context context;
     private LinearLayout rootView;
-    private EditText inputReferencePointRadius, inputPredictPointRadius, inputActualPointRadius, inputK;
-    private CheckBox debugModeCheckBox;
+    private Slider referencePointRadiusSlider, predictPointRadiusSlider, actualPointRadiusSlider, kNearestSlider, kMeansSlider, qClusterSlider;
+    private CheckBox debugModeCheckBox, clusteringCheckBox;
     private HighlightButton btConfirm, btCancel;
     private FunctionView apValueView, highlightFunctionView, weightFunctionView;
 
@@ -31,10 +32,13 @@ public class SettingsView extends LinearLayout {
     private void initView(){
         inflate(context, R.layout.window_settingsview, this);
         rootView = findViewById(R.id.settingsRootView);
-        inputReferencePointRadius = findViewById(R.id.inputReferencePointRadius);
-        inputPredictPointRadius = findViewById(R.id.inputPredictPointRadius);
-        inputActualPointRadius = findViewById(R.id.inputActualPointRadius);
-        inputK = findViewById(R.id.inputK);
+        referencePointRadiusSlider = findViewById(R.id.referencePointRadiusSlider);
+        predictPointRadiusSlider = findViewById(R.id.predictPointRadiusSlider);
+        actualPointRadiusSlider = findViewById(R.id.actualPointRadiusSlider);
+        kNearestSlider = findViewById(R.id.kNearestSlider);
+        kMeansSlider = findViewById(R.id.kMeansSlider);
+        qClusterSlider = findViewById(R.id.qClusterSlider);
+        clusteringCheckBox = findViewById(R.id.displayClustering);
         debugModeCheckBox = findViewById(R.id.displayReferencePoint);
         btConfirm = findViewById(R.id.btConfirm);
         btCancel = findViewById(R.id.btCancel);
@@ -99,12 +103,14 @@ public class SettingsView extends LinearLayout {
     private void saveChanged(){
         ConfigManager config = ConfigManager.getInstance();
 
-        config.referencePointRadius = Integer.parseInt(inputReferencePointRadius.getText().toString());
-        config.predictPointRadius = Integer.parseInt(inputPredictPointRadius.getText().toString());
-        config.actualPointRadius = Integer.parseInt(inputActualPointRadius.getText().toString());
+        config.referencePointRadius = (int) referencePointRadiusSlider.getValue();
+        config.predictPointRadius = (int) predictPointRadiusSlider.getValue();
+        config.actualPointRadius = (int) actualPointRadiusSlider.getValue();
+        config.kNearest = (int) kNearestSlider.getValue();
+        config.kMeans = (int) kMeansSlider.getValue();
+        config.qClusterNum = (int) qClusterSlider.getValue();
         config.isDebugMode = debugModeCheckBox.isChecked();
-        config.k = Integer.parseInt(inputK.getText().toString());
-        // config.setTestPointAtIndex(testPointSpinner.getSelectedItemPosition());
+        config.displayClustering = clusteringCheckBox.isChecked();
         apValueView.setAllChecked(config.enableApValues);
         highlightFunctionView.setAllChecked(config.enableHighlightFunctions);
         weightFunctionView.setAllChecked(config.enableWeightFunctions);
@@ -116,11 +122,14 @@ public class SettingsView extends LinearLayout {
     private void setView(){
         ConfigManager config = ConfigManager.getInstance();
 
-        inputReferencePointRadius.setText(String.valueOf(config.referencePointRadius));
-        inputPredictPointRadius.setText(String.valueOf(config.predictPointRadius));
-        inputActualPointRadius.setText(String.valueOf(config.actualPointRadius));
+        referencePointRadiusSlider.setValue(config.referencePointRadius);
+        predictPointRadiusSlider.setValue(config.predictPointRadius);
+        actualPointRadiusSlider.setValue(config.actualPointRadius);
+        kNearestSlider.setValue(config.kNearest);
+        kMeansSlider.setValue(config.kMeans);
+        qClusterSlider.setValue(config.qClusterNum);
         debugModeCheckBox.setChecked(config.isDebugMode);
-        inputK.setText(String.valueOf(config.k));
+        clusteringCheckBox.setChecked(config.displayClustering);
         apValueView.setFunctions(config.apValues, config.enableApValues);
         highlightFunctionView.setFunctions(config.getAllHighlightFunctionNames(), config.enableHighlightFunctions);
         weightFunctionView.setFunctions(config.getAllWeightFunctionNames(), config.enableWeightFunctions);

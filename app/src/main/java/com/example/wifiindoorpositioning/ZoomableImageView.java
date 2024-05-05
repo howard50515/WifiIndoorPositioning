@@ -28,6 +28,7 @@ import com.example.wifiindoorpositioning.manager.ApDataManager;
 import com.example.wifiindoorpositioning.manager.ConfigManager;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 
@@ -40,15 +41,9 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
     private final PointF fingerPoint = new PointF(2854, 1407);
     private float lookAngle = 0, northOffset = 0;
 
-    private ArrayList<ReferencePoint> drawPoints;
-
-    private ArrayList<ReferencePoint> testPoints;
-
-    private List<DistanceInfo> highlights;
-
     public ZoomableImageView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
-        getScrollView();
+        onGlobalLayout();
 
         matrix = getImageMatrix();
 
@@ -56,21 +51,15 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
 
         canvasSettings();
 
-        // setFingerPoint(ConfigManager.getInstance().testPoint.coordinateX, ConfigManager.getInstance().testPoint.coordinateY);
+        if (isInEditMode()) return;
 
         ApDataManager.getInstance().registerOnResultChangedListener(new ApDataManager.OnResultChangedListener() {
             @Override
             public void resultChanged(int code) {
                 ApDataManager.Coordinate c = ApDataManager.getPredictCoordinate(ApDataManager.getInstance().highlightDistances);
                 setImagePoint(c.x, c.y);
-                setHighlights(ApDataManager.getInstance().highlightDistances);
             }
         });
-//        ConfigManager.getInstance().registerOnConfigChangedListener(() -> {
-//            TestPoint testPoint = ConfigManager.getInstance().testPoint;
-//
-//            setFingerPoint(testPoint.coordinateX, testPoint.coordinateY);
-//        });
     }
 
     public void screenPointToImagePoint(PointF p, float pointX, float pointY){
@@ -128,21 +117,6 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
         postInvalidate();
     }
 
-    public void setReferencePoints(ArrayList<ReferencePoint> referencePoints){
-        drawPoints = referencePoints;
-
-        postInvalidate();
-    }
-    public void setTestPoints(ArrayList<ReferencePoint> testPoints){
-        this.testPoints = testPoints;
-    }
-
-    public void setHighlights(ArrayList<DistanceInfo> distances){
-        highlights = distances;
-
-        postInvalidate();
-    }
-
     public PointF getFingerPoint(){
         return fingerPoint;
     }
@@ -156,7 +130,7 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
 
         postInvalidate();
     }
-    public void setFingerPointWithScreenPoint(float x, float y){
+    private void setFingerPointWithScreenPoint(float x, float y){
         screenPointToImagePoint(fingerPoint, x, y);
 
         if (fingerPointChangedListener != null){
@@ -185,21 +159,20 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
         pointsPaint.setStyle(Paint.Style.FILL);
 
         highlightPaint = new Paint();
-        highlightPaint.setColor(Color.GREEN);
-        highlightPaint.setStyle(Paint.Style.FILL);
+        highlightPaint.setColor(Color.BLACK);
+        highlightPaint.setStyle(Paint.Style.STROKE);
+        highlightPaint.setStrokeWidth(2);
 
         fingerPaint = new Paint();
         fingerPaint.setColor(Color.BLACK);
         fingerPaint.setStyle(Paint.Style.FILL);
     }
 
-    public float density, width, height, coordinateDensityScalar;
+    public float density, imageWidth, imageHeight, coordinateDensityScalar;
     private float minScale, displayWidth, displayHeight;
     public static final float defaultDensity = 2.625f;
 
-    @SuppressLint("ClickableViewAccessibility")
     private void zoomImageSettings(){
-
         DisplayMetrics displayMetrics = getContext().getResources().getDisplayMetrics();
 
         displayWidth = displayMetrics.widthPixels;
@@ -213,14 +186,37 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
 
             density = displayMetrics.density;
             coordinateDensityScalar = density / defaultDensity;
-            width = bitmap.getWidth();
-            height = bitmap.getHeight();
-
-            minScale = Math.min(displayMetrics.widthPixels / (width * density),
-                    displayMetrics.heightPixels / (height * density));
-
-            matrix.setScale(minScale, minScale);
+            imageWidth = bitmap.getWidth();
+            imageHeight = bitmap.getHeight();
         }
+
+        setImageMatrix(matrix);
+    }
+
+    private void onGlobalLayout(){
+        this.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                ZoomableImageView.this.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+
+                getDisplaySize();
+
+                getScrollView();
+            }
+        });
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private void getDisplaySize(){
+        displayWidth = getWidth();
+        displayHeight = getHeight();
+
+        minScale = Math.min(displayWidth / (imageWidth * density),
+                displayHeight / (imageHeight * density));
+
+        matrix.setScale(minScale, minScale);
+
+        matrix.postTranslate((displayWidth - (imageWidth * density * minScale)) / 2f, 0);
 
         setImageMatrix(matrix);
 
@@ -260,26 +256,43 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
 
                                 float changeX = changeMatrixValues[2] + x;
                                 float changeY = changeMatrixValues[5] + y;
-                                float diffX = displayWidth * ((changeMatrixValues[0] / minScale) - 1);
-                                float diffY = displayHeight * ((changeMatrixValues[4] / minScale) - 1);
+                                float diffX = displayWidth - (changeMatrixValues[0] * density * imageWidth);
+                                float diffY = displayHeight - (changeMatrixValues[4] * density * imageHeight);
 
-                                if (diffX < 0){
-                                    x = -changeMatrixValues[2] + (displayWidth - (width * density * changeMatrixValues[0])) / 2f;
+                                float allowSpace = 50 * density * changeMatrixValues[0];
+
+                                if (diffX > 0){
+                                    if (changeX < -allowSpace){
+                                        x = -changeMatrixValues[2] - allowSpace;
+                                    }
+                                    else if (changeX > diffX + allowSpace){
+                                        x = diffX - changeMatrixValues[2] + allowSpace;
+                                    }
                                 }
-                                else if (diffX + changeX < -50){
-                                    x = -diffX - changeMatrixValues[2] - 50;
+                                else{
+                                    if (changeX < diffX - allowSpace){
+                                        x = diffX - changeMatrixValues[2] - allowSpace;
+                                    }
+                                    else if (changeX > allowSpace){
+                                        x = -changeMatrixValues[2] + allowSpace;
+                                    }
                                 }
-                                else if (changeX > 50){
-                                    x = 50 - changeMatrixValues[2];
+
+                                if (diffY > 0){
+                                    if (changeY < -allowSpace){
+                                        y = -changeMatrixValues[5] - allowSpace;
+                                    }
+                                    else if (changeY > diffY + allowSpace){
+                                        y = diffY - changeMatrixValues[5] + allowSpace;
+                                    }
                                 }
-                                if (diffY < 0){
-                                    y = -changeMatrixValues[5] + (displayHeight - (height * density * changeMatrixValues[4])) / 2f;
-                                }
-                                else if (diffY + changeY < -50){
-                                    y = -diffY - changeMatrixValues[5] - 50;
-                                }
-                                else if (changeY > 50){
-                                    y = 50 - changeMatrixValues[5];
+                                else{
+                                    if (changeY < diffY - allowSpace){
+                                        y = diffY - changeMatrixValues[5] - allowSpace;
+                                    }
+                                    else if (changeY >  + allowSpace){
+                                        y = -changeMatrixValues[5] + allowSpace;
+                                    }
                                 }
 
                                 matrix.set(changeMatrix);
@@ -291,9 +304,9 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
 
                             float scale = newDis / dis;
 
-                            if (changeMatrixValues[0] * scale < minScale * 0.9f){
-                                scale = minScale * 0.9f / changeMatrixValues[0];
-                            }
+//                            if (changeMatrixValues[0] * scale < minScale * 0.9f){
+//                                scale = minScale * 0.9f / changeMatrixValues[0];
+//                            }
 
                             matrix.set(changeMatrix);
                             matrix.postScale(scale, scale, midX, midY);
@@ -320,32 +333,23 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
     }
 
     private void getScrollView(){
-        ViewTreeObserver observer = this.getViewTreeObserver();
-        observer.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
-            @Override
-            public void onGlobalLayout() {
-                displayHeight = getHeight();
-
-                ZoomableImageView.this.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                if (scrollView == null){
-                    ViewParent temp = getParent();
-                    ViewGroup parent = null;
-                    if (temp instanceof ViewGroup)
-                        parent = (ViewGroup) temp;
-                    while (parent != null){
-                        if (parent instanceof ScrollView){
-                            scrollView = (ScrollView) parent;
-                            break;
-                        }
-                        temp = parent.getParent();
-                        if (temp instanceof ViewGroup)
-                            parent = (ViewGroup) temp;
-                        else
-                            parent = null;
-                    }
+        if (scrollView == null){
+            ViewParent temp = getParent();
+            ViewGroup parent = null;
+            if (temp instanceof ViewGroup)
+                parent = (ViewGroup) temp;
+            while (parent != null){
+                if (parent instanceof ScrollView){
+                    scrollView = (ScrollView) parent;
+                    break;
                 }
+                temp = parent.getParent();
+                if (temp instanceof ViewGroup)
+                    parent = (ViewGroup) temp;
+                else
+                    parent = null;
             }
-        });
+        }
     }
 
     private float distance(MotionEvent event){
@@ -361,6 +365,8 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
 
     private final float[] values = new float[9];
 
+    private final float[] hsv = new float[]{0f, 1f, 1f};
+
     @Override
     protected void onDraw(Canvas canvas){
         super.onDraw(canvas);
@@ -368,29 +374,70 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
         matrix.getValues(values);
 
         ConfigManager configManager = ConfigManager.getInstance();
+        ApDataManager apDataManager = ApDataManager.getInstance();
 
         float scaleX = 1f;
         float scaleY = 1f;
 
-        float pointRadius = configManager.referencePointRadius * coordinateDensityScalar * values[0];
-        if (configManager.isDebugMode && drawPoints != null){
-            for (ReferencePoint rp : drawPoints){
-                float screenX = rp.coordinateX * scaleX * coordinateDensityScalar * values[0] + values[2];
-                float screenY = rp.coordinateY * scaleY * coordinateDensityScalar * values[4] + values[5];
+        ArrayList<ApDataManager.ProtoCluster> pointsCluster = apDataManager.signalClusters;
+        ArrayList<DistanceInfo> distances = ApDataManager.getInstance().originalDistances;
+        ArrayList<DistanceInfo> highlights = ApDataManager.getInstance().highlightDistances;
 
-                if (highlights == null){
-                    canvas.drawCircle(screenX, screenY, pointRadius, pointsPaint);
-                }
-                else{
-                    boolean find = false;
-                    for (int j = 0; j < highlights.size(); j++){
-                        if (rp.name.equals(highlights.get(j).rpName)){
-                            find = true;
-                            break;
+        float pointRadius = configManager.referencePointRadius * coordinateDensityScalar * values[0];
+        if (configManager.isDebugMode){
+            if (configManager.displayClustering && pointsCluster != null){
+                highlightPaint.setColor(Color.BLACK);
+                highlightPaint.setStyle(Paint.Style.STROKE);
+
+                for (int i = 0; i < pointsCluster.size(); i++){
+                    ArrayList<ReferencePoint> rps = pointsCluster.get(i).rps;
+
+                    hsv[0] = (float) i / pointsCluster.size() * 360;
+                    pointsPaint.setColor(Color.HSVToColor(hsv));
+
+                    for (ReferencePoint rp : rps){
+                        float screenX = rp.coordinateX * scaleX * coordinateDensityScalar * values[0] + values[2];
+                        float screenY = rp.coordinateY * scaleY * coordinateDensityScalar * values[4] + values[5];
+
+                        canvas.drawCircle(screenX, screenY, pointRadius, pointsPaint);
+                        if (highlights != null){
+                            boolean find = false;
+                            for (int j = 0; j < highlights.size(); j++){
+                                if (rp.name.equals(highlights.get(j).rpName)){
+                                    find = true;
+                                    break;
+                                }
+                            }
+
+                            if (find) canvas.drawCircle(screenX, screenY, pointRadius, highlightPaint);
                         }
                     }
+                }
+            }
 
-                    canvas.drawCircle(screenX, screenY, pointRadius, find ? highlightPaint : pointsPaint);
+            if (!configManager.displayClustering && distances != null) {
+                pointsPaint.setColor(Color.RED);
+
+                highlightPaint.setColor(Color.GREEN);
+                highlightPaint.setStyle(Paint.Style.FILL);
+
+                for (DistanceInfo distance : distances) {
+                    float screenX = distance.coordinateX * scaleX * coordinateDensityScalar * values[0] + values[2];
+                    float screenY = distance.coordinateY * scaleY * coordinateDensityScalar * values[4] + values[5];
+
+                    if (highlights == null) {
+                        canvas.drawCircle(screenX, screenY, pointRadius, pointsPaint);
+                    } else {
+                        boolean find = false;
+                        for (int j = 0; j < highlights.size(); j++) {
+                            if (distance.rpName.equals(highlights.get(j).rpName)) {
+                                find = true;
+                                break;
+                            }
+                        }
+
+                        canvas.drawCircle(screenX, screenY, pointRadius, find ? highlightPaint : pointsPaint);
+                    }
                 }
             }
         }
