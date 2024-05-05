@@ -141,6 +141,40 @@ public class MainActivity extends AppCompatActivity {
                 return new ArrayList<>(sortDistances.subList(0, Math.min(k, sortDistances.size())));
             }
         });
+        ConfigManager.getInstance().addHighlightFunction("取低new or loss rate", new HighlightFunction() {
+            @Override
+            public ArrayList<DistanceInfo> highlight(ArrayList<DistanceInfo> distances, int k) {
+                ArrayList<DistanceInfo> sortDistances = new ArrayList<>(distances);
+
+                sortDistances.sort(DistanceInfo.distanceComparable);
+
+                if (sortDistances.size() <= 1) return sortDistances;
+
+                float[] NR = new float[sortDistances.size()];
+                int foundNum = sortDistances.get(0).foundNum;
+                int pastNotFoundNum = sortDistances.get(0).pastNotFoundNum;
+                NR[0] = (float) foundNum / pastNotFoundNum;
+
+                float[] LR = new float[sortDistances.size()];
+                int notFoundNum = sortDistances.get(0).notFoundNum;
+                int pastFoundNum = sortDistances.get(0).pastFoundNum;
+                LR[0] = (float) notFoundNum / pastFoundNum;
+
+                for (int i = sortDistances.size() - 1; i > 0; i--) {
+                    foundNum = sortDistances.get(i).foundNum;
+                    pastNotFoundNum = sortDistances.get(i).pastNotFoundNum;
+                    NR[i] = (float) foundNum / pastNotFoundNum;
+                    notFoundNum = sortDistances.get(i).notFoundNum;
+                    pastFoundNum = sortDistances.get(i).pastFoundNum;
+                    LR[i] = (float) notFoundNum / pastFoundNum;
+                    if(NR[i] > (NR[0]+0.01) && LR[i]>(LR[0]+0.01)) {
+                        sortDistances.remove(i);
+                    }
+                }
+
+                return new ArrayList<>(sortDistances.subList(0, Math.min(k, sortDistances.size())));
+            }
+        });
         ConfigManager.getInstance().addHighlightFunction("Mod 取低new rate", new HighlightFunction() {
             @Override
             public ArrayList<DistanceInfo> highlight(ArrayList<DistanceInfo> distances, int k) {
