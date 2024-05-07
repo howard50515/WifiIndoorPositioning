@@ -39,6 +39,8 @@ public class MainActivity extends AppCompatActivity {
     private HighlightButton btScan, btSettings, btCopy;
     private SettingsView settingsView;
 
+    private TestPoint testPoint;
+
     @SuppressLint({"ClickableViewAccessibility", "SetTextI18n", "DefaultLocale"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -340,6 +342,71 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        SystemServiceManager.getInstance().setOnOrientationChangedListener(degree -> {
+            imgCompass.setRotation(degree);
+            txtOrientation.setText(String.format("%.2f (%s)", degree, getDirection(degree)));
+            mapImage.setLookAngle(degree);
+        });
+
+        mapImage.setNorthOffset(180);
+        mapImage.setOnImagePointChangedListener(new ZoomableImageView.OnImagePointChangedListener() {
+            @Override
+            public void pointChange(float x, float y) {
+                float diffX = x - testPoint.coordinateX;
+                float diffY = y - testPoint.coordinateY;
+
+                txtDistance.setText(String.format("%.2f, %s\n(%.2f, %.2f)",
+                        Math.sqrt(diffX * diffX + diffY * diffY), testPoint.name, testPoint.coordinateX, testPoint.coordinateY));
+            }
+        });
+        mapImage.setOnFingerPointChangedListener(new ZoomableImageView.OnFingerPointChangedListener() {
+            @Override
+            public void pointChange(float x, float y) {
+                PointF p = mapImage.getImagePoint();
+                float diffX = x - p.x;
+                float diffY = y - p.y;
+
+                testPoint = new TestPoint("自定義", x, y);
+
+                contentView.setTestPoint(x, y);
+
+                txtDistance.setText(String.format("%.2f, %s\n(%.2f, %.2f)",
+                        Math.sqrt(diffX * diffX + diffY * diffY), contentView.getTestPoint().name, x, y));
+            }
+        });
+
+        btScan.setOnButtonDownListener(() -> {
+            txtStatus.setText("掃描中...");
+            SystemServiceManager.getInstance().scan((code, results) -> {
+                switch (code) {
+                    case SystemServiceManager.CODE_SUCCESS:
+                        txtStatus.setText("成功");
+                        ApDataManager.getInstance().setResult(results);
+                        break;
+                    case SystemServiceManager.CODE_NO_LOCATION:
+                        txtStatus.setText("未開啟位置");
+                        break;
+                    case SystemServiceManager.CODE_NO_PERMISSION:
+                        txtStatus.setText("未提供權限");
+                        break;
+                    case SystemServiceManager.CODE_TOO_FREQUENT:
+                        txtStatus.setText("過於頻繁");
+                        break;
+                    default:
+                        txtStatus.setText("未知錯誤");
+                        break;
+                }
+            });
+        });
+        btSettings.setOnButtonDownListener(() -> settingsView.showView(this));
+        // setConfiguration();
+        setDebugView();
+        ConfigManager.getInstance().registerOnConfigChangedListener(this::setDebugView);
+
+        testPoint = ConfigManager.getInstance().getTestPointAtIndex(0);
+
+        // if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) return;
+
         apValueModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().apValues));
         highlightModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().getAllHighlightFunctionNames()));
         displayModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ConfigManager.getInstance().getAllDisplayFunctionNames()));
@@ -419,7 +486,7 @@ public class MainActivity extends AppCompatActivity {
         testPointSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                TestPoint testPoint = ConfigManager.getInstance().getTestPointAtIndex(i);
+                testPoint = ConfigManager.getInstance().getTestPointAtIndex(i);
 
                 PointF p = mapImage.getImagePoint();
                 float diffX = testPoint.coordinateX - p.x;
@@ -439,72 +506,9 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        mapImage.setNorthOffset(180);
-        mapImage.setOnImagePointChangedListener(new ZoomableImageView.OnImagePointChangedListener() {
-            @Override
-            public void pointChange(float x, float y) {
-                TestPoint p = contentView.getTestPoint();
-                float diffX = x - p.coordinateX;
-                float diffY = y - p.coordinateY;
-
-                txtDistance.setText(String.format("%.2f, %s\n(%.2f, %.2f)",
-                        Math.sqrt(diffX * diffX + diffY * diffY), p.name, p.coordinateX, p.coordinateY));
-            }
-        });
-        mapImage.setOnFingerPointChangedListener(new ZoomableImageView.OnFingerPointChangedListener() {
-            @Override
-            public void pointChange(float x, float y) {
-                PointF p = mapImage.getImagePoint();
-                float diffX = x - p.x;
-                float diffY = y - p.y;
-
-                contentView.setTestPoint(x, y);
-
-                txtDistance.setText(String.format("%.2f, %s\n(%.2f, %.2f)",
-                        Math.sqrt(diffX * diffX + diffY * diffY), contentView.getTestPoint().name, x, y));
-            }
-        });
-
         contentView.setMainActivity(this);
 
-        btScan.setOnButtonDownListener(() -> {
-            txtStatus.setText("掃描中...");
-            SystemServiceManager.getInstance().scan((code, results) -> {
-                switch (code) {
-                    case SystemServiceManager.CODE_SUCCESS:
-                        txtStatus.setText("成功");
-                        ApDataManager.getInstance().setResult(results);
-                        break;
-                    case SystemServiceManager.CODE_NO_LOCATION:
-                        txtStatus.setText("未開啟位置");
-                        break;
-                    case SystemServiceManager.CODE_NO_PERMISSION:
-                        txtStatus.setText("未提供權限");
-                        break;
-                    case SystemServiceManager.CODE_TOO_FREQUENT:
-                        txtStatus.setText("過於頻繁");
-                        break;
-                    default:
-                        txtStatus.setText("未知錯誤");
-                        break;
-                }
-            });
-        });
-        btSettings.setOnButtonDownListener(() -> settingsView.showView(this));
         btCopy.setOnButtonDownListener(() -> SystemServiceManager.getInstance().toClipBoard(ApDataManager.getInstance().originalResults));
-
-        // setConfiguration();
-        setDebugView();
-        ConfigManager.getInstance().registerOnConfigChangedListener(this::setDebugView);
-
-//        System.out.println(txtMethodName.getVisibility());
-//        System.out.println(txtMethodName.getText());
-
-        SystemServiceManager.getInstance().setOnOrientationChangedListener(degree -> {
-            imgCompass.setRotation(degree);
-            txtOrientation.setText(String.format("%.2f (%s)", degree, getDirection(degree)));
-            mapImage.setLookAngle(degree);
-        });
 
         debugModeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
@@ -537,7 +541,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setDebugView(){
-        if (ConfigManager.getInstance().isDebugMode){
+        if (ConfigManager.getInstance().isDebugMode && getResources().getConfiguration().orientation != Configuration.ORIENTATION_LANDSCAPE){
             ViewGroup parent = (ViewGroup) debugView.getParent();
             if (parent != null)
                 parent.removeView(debugView);

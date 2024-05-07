@@ -3,6 +3,7 @@ package com.example.wifiindoorpositioning;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
+import android.content.res.Configuration;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
@@ -68,7 +69,7 @@ public class SettingsView extends LinearLayout {
 
                 LinearLayout debugView = ConfigManager.getInstance().debugView;
 
-                if (ConfigManager.getInstance().isDebugMode){
+                if (ConfigManager.getInstance().isDebugMode && getResources().getConfiguration().orientation != Configuration.ORIENTATION_LANDSCAPE){
                     rootView.removeView(debugView);
                 }
                 else{
